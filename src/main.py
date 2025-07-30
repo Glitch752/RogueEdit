@@ -2,12 +2,11 @@ import pygame
 
 from engine import Engine
 from sequencer import Sequencer
+from input_sequences import InputSequences
 
 pygame.init()
 
 WIN = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
-
-FONT = pygame.font.SysFont("Courier", 24)
 
 TILEMAP = pygame.image.load("kenney_micro-roguelike/colored_tilemap_packed.png").convert_alpha()
 
@@ -19,7 +18,10 @@ def main():
 
     engine = Engine(TILEMAP)
     engine_scale = 3
-    sequencer = Sequencer((width, height - engine.window.get_height() * engine_scale))
+    engine_width = engine.window.get_width() * engine_scale
+    engine_height = engine.window.get_height() * engine_scale
+    sequencer = Sequencer((0, engine_height, width, height - engine_height), engine_width)
+    input_sequences = InputSequences((0, 0, width - engine_width, engine_height))
 
     running: bool = True
     
@@ -32,16 +34,22 @@ def main():
             elif event.type == pygame.VIDEORESIZE:
                 width, height = event.w, event.h
                 sequencer.resize(width, height - engine.window.get_height() * engine_scale)
+                input_sequences.resize(width - engine.window.get_width() * engine_scale, engine.window.get_height() * engine_scale)
+            elif event.type == pygame.MOUSEMOTION:
+                sequencer.on_mouse_move()
+                input_sequences.on_mouse_move()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sequencer.on_click()
+                    input_sequences.on_click()
         
         WIN.fill('white')
 
         engine.draw()
-        sequencer.draw()
-
-        engine_width = engine.window.get_width() * engine_scale
-        engine_height = engine.window.get_height() * engine_scale
+        sequencer.draw(WIN)
+        input_sequences.draw(WIN)
+        
         WIN.blit(pygame.transform.scale(engine.window, (engine_width, engine_height)), (width - engine_width, 0))
-        WIN.blit(sequencer.window, (0, engine_height))
 
         pygame.display.flip()
     
