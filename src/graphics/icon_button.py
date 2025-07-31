@@ -1,11 +1,12 @@
 from pygame import Surface
 import pygame
+
+from graphics.hoverable import Hoverable
 from .asset_loader import loader
 from typing import Callable
 
-class IconButton:
+class IconButton(Hoverable):
     icon: Surface
-    hovered: bool
     
     def __init__(self, filename: str, click_callback: Callable):
         self.icon = loader.load(filename)
@@ -19,9 +20,6 @@ class IconButton:
     
     def set_icon(self, filename: str):
         self.icon = loader.load(filename)
-        
-    def mouse_move(self, mouse: tuple[int, int]):
-        self.hovered = self.rect.collidepoint(*mouse)
     
     def draw(self, surface: Surface, pos: tuple[int, int]):
         (self.rect.x, self.rect.y) = pos
@@ -29,7 +27,3 @@ class IconButton:
         surface.blit(self.icon, self.rect)
         if self.hovered:
             surface.blit(self.rect_surface, (self.rect.x, self.rect.y))
-    
-    def click(self, x: int, y: int):
-        if self.rect.collidepoint(x, y):
-            self.click_callback()

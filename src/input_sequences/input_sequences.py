@@ -12,7 +12,7 @@ class InputSequences(Frame):
 
     def draw(self, surface: pygame.Surface):
         self.window.fill("#222222")
-        self.window.fill("#333333", (0, 0, self.window.get_width(), 20))
+        self.window.fill("#333333", (0, 0, self.window.width, 20))
         self.window.blit(self.title_text, (10, 4))
         
         super().draw(surface)

@@ -1,27 +1,36 @@
 import pygame
 
 from engine import Engine
-from sequencer import Sequencer
-from input_sequences import InputSequences
+from frame import Frame
+from sequencer.sequencer import Sequencer
+from input_sequences.input_sequences import InputSequences
+from puzzle import puzzles
 
 pygame.init()
 
+MIN_WIDTH = 1280
+MIN_HEIGHT = 720
 WIN = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 
 TILEMAP = pygame.image.load("kenney_micro-roguelike/colored_tilemap_packed.png").convert_alpha()
 
 def main():
+    global WIN
+    
     delta: float = 0.0
     clock: pygame.time.Clock = pygame.time.Clock()
 
     width, height = WIN.get_size()
 
-    engine = Engine(TILEMAP)
+    current_puzzle: int = 0
+    engine = puzzles[current_puzzle].make_engine(TILEMAP)
     engine_scale = 3
-    engine_width = engine.window.get_width() * engine_scale
-    engine_height = engine.window.get_height() * engine_scale
+    engine_width = engine.window.width * engine_scale
+    engine_height = engine.window.height * engine_scale
     sequencer = Sequencer((0, engine_height, width, height - engine_height), engine_width)
     input_sequences = InputSequences((0, 0, width - engine_width, engine_height))
+    
+    frames: list[Frame] = [sequencer, input_sequences]
 
     running: bool = True
     
@@ -32,16 +41,24 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.VIDEORESIZE:
-                width, height = event.w, event.h
-                sequencer.resize(width, height - engine.window.get_height() * engine_scale)
-                input_sequences.resize(width - engine.window.get_width() * engine_scale, engine.window.get_height() * engine_scale)
+                width = max(event.w, MIN_WIDTH)
+                height = max(event.h, MIN_HEIGHT)
+                sequencer.resize(width, height - engine.window.height * engine_scale)
+                input_sequences.resize(width - engine.window.width * engine_scale, engine.window.height * engine_scale)
+                if width != event.w or height != event.h:
+                    WIN = pygame.display.set_mode((width, height), pygame.RESIZABLE)
             elif event.type == pygame.MOUSEMOTION:
-                sequencer.on_mouse_move()
-                input_sequences.on_mouse_move()
+                for frame in frames:
+                    frame.on_mouse_move()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    sequencer.on_click()
-                    input_sequences.on_click()
+                    for frame in frames:
+                        if frame.mouse_over():
+                            frame.on_click()
+            elif event.type == pygame.MOUSEWHEEL:
+                for frame in frames:
+                    if frame.mouse_over():
+                        frame.on_scroll(event.y)
         
         engine.update(delta)
         sequencer.update(engine, delta)
