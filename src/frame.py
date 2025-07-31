@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import Optional, TypeVar
 import pygame
 
 from graphics.hoverable import Hoverable
@@ -27,17 +27,22 @@ class Frame:
     def mouse_over(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
-    def on_click(self):
-        mouse = pygame.mouse.get_pos()
-        (mx, my) = (mouse[0] - self.rect.x, mouse[1] - self.rect.y)
+    def on_mouse_down(self, mouse: tuple[int, int]):
         for icon in self.hoverables:
-            icon.click(mx, my)
+            icon.click(mouse[0], mouse[1])
     
-    def on_mouse_move(self):
-        mouse = pygame.mouse.get_pos()
-        (mx, my) = (mouse[0] - self.rect.x, mouse[1] - self.rect.y)
+    def on_mouse_up(self, mouse: tuple[int, int]):
+        pass
+    
+    def on_mouse_move(self, mouse: tuple[int, int]):
+        """Returns the cursor that should be set, if any"""
+        
+        cursor_set: Optional[pygame.Cursor | int] = None
         for hoverable in self.hoverables:
-            hoverable.mouse_move((mx, my))
+            if (c := hoverable.mouse_move(mouse)) != None and not cursor_set:
+                cursor_set = c
+        
+        return cursor_set
     
     def on_scroll(self, y: int):
         pass

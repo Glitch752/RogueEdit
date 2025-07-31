@@ -1,3 +1,4 @@
+from typing import Optional
 import pygame
 
 from engine import Engine
@@ -48,13 +49,27 @@ def main():
                 if width != event.w or height != event.h:
                     WIN = pygame.display.set_mode((width, height), pygame.RESIZABLE)
             elif event.type == pygame.MOUSEMOTION:
+                cursor_set: Optional[pygame.Cursor | int] = None
+                mouse = pygame.mouse.get_pos()
                 for frame in frames:
-                    frame.on_mouse_move()
+                    (mx, my) = (mouse[0] - frame.rect.x, mouse[1] - frame.rect.y)
+                    if (c := frame.on_mouse_move((mx, my))) != None:
+                        cursor_set = c
+                if cursor_set:
+                    pygame.mouse.set_cursor(cursor_set)
+                else:
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     for frame in frames:
                         if frame.mouse_over():
-                            frame.on_click()
+                            mouse = pygame.mouse.get_pos()
+                            frame.on_mouse_down((mouse[0] - frame.rect.x, mouse[1] - frame.rect.y))
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    for frame in frames:
+                        mouse = pygame.mouse.get_pos()
+                        frame.on_mouse_up((mouse[0] - frame.rect.x, mouse[1] - frame.rect.y))
             elif event.type == pygame.MOUSEWHEEL:
                 for frame in frames:
                     if frame.mouse_over():

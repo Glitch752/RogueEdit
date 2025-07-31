@@ -13,11 +13,13 @@ class Sequencer(Frame):
     
     playing_direction: float
     
-    time_per_beat: float
-    
     scroll_target_x: float
     scroll_position_x: float
     current_position: float
+    
+    dragging_playhead: bool
+    
+    time_per_beat: float
     
     def __init__(self, pos: tuple[int, int, int, int], engine_width: int) -> None:
         super().__init__(pos)
@@ -40,6 +42,8 @@ class Sequencer(Frame):
         self.scroll_target_x = 0.0
         self.scroll_position_x = 0.0
         self.current_position = 0.0
+        
+        self.dragging_playhead = False
         
         self.time_per_beat = 0.5
     
@@ -113,6 +117,11 @@ class Sequencer(Frame):
     def update(self, engine, delta):
         self.scroll_position_x = exp_decay(self.scroll_position_x, self.scroll_target_x, 15, delta)
         
+        if self.dragging_playhead:
+            mouse_x = pygame.mouse.get_pos()[0] - self.rect.x
+            self.current_position = (mouse_x - MARGIN_LEFT) / PIXELS_PER_BEAT + self.scroll_position_x
+            self.current_position = max(0, self.current_position)
+        
         for track in self.tracks:
             track.update(delta)
         
@@ -156,6 +165,34 @@ class Sequencer(Frame):
                             case Input.Down: engine.move_player(0, 1)
                             case Input.Left: engine.move_player(-1, 0)
                             case Input.Right: engine.move_player(1, 0)
+    
+    def mouse_over_playhead(self, mouse: tuple[int, int]) -> bool:
+        playhead_position = (self.current_position - self.scroll_position_x) * PIXELS_PER_BEAT + MARGIN_LEFT
+        padding = 4
+        return (playhead_position - 1 - padding <= mouse[0] <= playhead_position + 1 + padding) and (32 <= mouse[1] <= self.window.height)
+    
+    def on_mouse_down(self, mouse: tuple[int, int]):
+        if self.mouse_over_playhead(mouse):
+            self.dragging_playhead = True
+            return
+        
+        return super().on_mouse_down(mouse)
+
+    def on_mouse_up(self, mouse: tuple[int, int]):
+        if self.dragging_playhead:
+            self.dragging_playhead = False
+        
+        return super().on_mouse_up(mouse)
+    
+    def on_mouse_move(self, mouse):
+        if self.mouse_over_playhead(mouse):
+            super().on_mouse_move((0, 0))
+            return pygame.SYSTEM_CURSOR_SIZEWE
+
+        if self.dragging_playhead:
+            return
+        
+        return super().on_mouse_move(mouse)
     
     def on_scroll(self, y: int):
         self.scroll_target_x -= y

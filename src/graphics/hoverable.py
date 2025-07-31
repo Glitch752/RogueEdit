@@ -14,8 +14,9 @@ class Hoverable:
     def in_self(self, point: tuple[int, int]) -> bool:
         return self.rect.collidepoint(point)
     
-    def mouse_move(self, mouse: tuple[int, int]):
+    def mouse_move(self, mouse: tuple[int, int]) -> Optional[pygame.Cursor | int]:
         self.hovered = self.in_self(mouse)
+        return pygame.SYSTEM_CURSOR_HAND if self.hovered else None
         
     def click(self, x: int, y: int):
         if self.in_self((x, y)):
