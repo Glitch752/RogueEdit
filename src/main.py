@@ -43,6 +43,9 @@ def main():
                     sequencer.on_click()
                     input_sequences.on_click()
         
+        engine.update(delta)
+        sequencer.update(engine, delta)
+
         WIN.fill('white')
 
         engine.draw()

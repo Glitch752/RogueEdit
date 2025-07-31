@@ -38,6 +38,12 @@ class Track:
         pygame.draw.rect(surface, self.color.title, (0, y, 48, 48))
         surface.blit(self.name_text, (10, y + 8))
 
+        for event in self.events:
+            for i, _input in enumerate(event["inputs"]):
+                if _input != "none":
+                    j = event["time"] + i
+                    surface.blit(t := loader.get_font(16).render(_input.capitalize(), True, 'white'), (48 + PIXELS_PER_BEAT * j + PIXELS_PER_BEAT // 2 - t.get_width() // 2, y + 24 - t.get_height() // 2))
+
 class Sequencer(Frame):
     tracks: list[Track]
     
@@ -55,16 +61,15 @@ class Sequencer(Frame):
         
         self.engine_width = engine_width
         
-        self.title_text = loader.get_font(12).render("Sequencer", True, "white")
+        self.title_text = loader.get_font(16).render("Sequencer", True, "white")
         self.play_pause_icon = self.add_icon(IconButton("play_icon.png", self.play_pressed))
         self.rewind_icon = self.add_icon(IconButton("rewind_icon.png", self.rewind_pressed))
         self.fast_forward_icon = self.add_icon(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
         
         self.tracks = [
-            Track(["event1", "event2"], "A", TRACK_COLORS[0], 3),
-            Track(["event1", "event2"], "B", TRACK_COLORS[1], 5),
-            Track(["event1", "event2"], "C", TRACK_COLORS[2], 8),
-            Track(["event1", "event2"], "D", TRACK_COLORS[3], 10)
+            Track([{"time": 0, "duration": 3, "inputs": ["right", "none", "right"]}, {"time": 4, "duration": 1, "inputs": ["up"]}], "A", TRACK_COLORS[0], 10),
+            Track([{"time": 0, "duration": 3, "inputs": ["right", "none", "right"]}, {"time": 4, "duration": 1, "inputs": ["up"]}], "B", TRACK_COLORS[1], 8),
+            Track([{"time": 0, "duration": 3, "inputs": ["right", "none", "right"]}, {"time": 4, "duration": 1, "inputs": ["up"]}], "C", TRACK_COLORS[2], 5)
         ]
 
         self.playing = False
@@ -107,9 +112,30 @@ class Sequencer(Frame):
         
         super().draw(surface)
 
-    def update(self, delta):
-        self.beat_timer += delta
-        if self.beat_timer >= self.time_per_beat:
-            self.beat_timer -= self.time_per_beat
+    def update(self, engine, delta):
+        if self.playing:
+            old_beat: int = self.current_position // self.time_per_beat
+            self.current_position += delta
+            beat: int = self.current_position // self.time_per_beat
 
-            self.current_beat += 1
+            # every beat, loop over the tracks and
+            # some other shit in order to trigger
+            # events/inputs
+            if beat != old_beat:
+                for track in self.tracks:
+                    track_beat: int = beat % track.repeat_length
+                    event_index: int = -1
+                    input_index: int = -1
+                    for i, event in enumerate(track.events):
+                        if track_beat in [event["time"] + j for j in range(event["duration"])]:
+                            event_index = i
+                            input_index = int(track_beat - event["time"])
+                            break
+                    new_input: str = track.events[event_index]["inputs"][input_index]
+                    if new_input != "none":
+                        # trigger a function
+                        match new_input:
+                            case "up": engine.move_player(0, -1)
+                            case "down": engine.move_player(0, 1)
+                            case "left": engine.move_player(-1, 0)
+                            case "right": engine.move_player(1, 0)

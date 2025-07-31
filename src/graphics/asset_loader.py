@@ -17,7 +17,7 @@ class AssetLoader:
     
     def get_font(self, size: int) -> Font:
         if size not in self.fonts:
-            self.fonts[size] = pygame.font.SysFont("Courier", size)
+            self.fonts[size] = pygame.font.SysFont("Consolas", size)
         return self.fonts[size]
 
 loader = AssetLoader()
