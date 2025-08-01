@@ -1,10 +1,12 @@
 import math
 import pygame
+from engine import Engine
 from frame import Frame
 from graphics.icon_button import IconButton
 from graphics.asset_loader import loader
 from input_sequences.event import Input
 from sequencer.constants import MARGIN_LEFT, PIXELS_PER_BEAT, TOP_MARGIN
+from sequencer.engine_playback_manager import EnginePlaybackManager
 from sequencer.track import Event, Track, TrackColor
 from utils import exp_decay
 
@@ -14,12 +16,20 @@ class Sequencer(Frame):
     playing_direction: float
     
     scroll_target_x: float
+    "In beats."
     scroll_position_x: float
+    "In beats."
     current_position: float
+    "In beats."
     
     dragging_playhead: bool
+    old_beat: int
     
     time_per_beat: float
+    max_length: int
+    "In beats."
+    
+    playback_manager: EnginePlaybackManager
     
     def __init__(self, pos: tuple[int, int, int, int], engine_width: int) -> None:
         super().__init__(pos)
@@ -32,9 +42,9 @@ class Sequencer(Frame):
         self.fast_forward_icon = self.add(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
         
         self.tracks = [
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.Right]), Event(time=4, duration=1, inputs=[Input.Right])], "A", TrackColor("#995555", "#553333", "#aa8888"), 10)),
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.CycleItem]), Event(time=4, duration=3, inputs=[Input.Right, Input.Empty, Input.Down])], "B", TrackColor("#559955", "#335533", "#88aa88"), 8)),
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.UseItem]), Event(time=4, duration=1, inputs=[Input.Right])], "C", TrackColor("#555599", "#333355", "#8888aa"), 5))
+            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.Right]), Event(time=4, duration=1, inputs=[Input.Right])], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
+            self.add(Track([Event(time=0, duration=3, inputs=[Input.Wait, Input.Empty, Input.CycleItem]), Event(time=4, duration=3, inputs=[Input.Right, Input.Empty, Input.Down])], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
+            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.UseItem]), Event(time=4, duration=1, inputs=[Input.Right])], "C", TrackColor("#555599", "#333355", "#555599"), 5))
         ]
 
         self.playing_direction = 0.0
@@ -44,8 +54,12 @@ class Sequencer(Frame):
         self.current_position = 0.0
         
         self.dragging_playhead = False
+        self.old_beat = 0
         
         self.time_per_beat = 0.5
+        self.max_length = int(60 / self.time_per_beat)
+        
+        self.playback_manager = EnginePlaybackManager()
     
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0
@@ -76,6 +90,12 @@ class Sequencer(Frame):
         self.play_pause_icon.draw(self.window, (icon_center - 16, 0))
         self.rewind_icon.draw(self.window, (icon_center - 64, 0))
         self.fast_forward_icon.draw(self.window, (icon_center + 32, 0))
+        
+        time_text = loader.get_font(16).render(f"{self.format_seconds(self.current_position * self.time_per_beat)} / {self.format_seconds(self.max_length * self.time_per_beat)}", True, "white")
+        self.window.blit(time_text, (self.window.width - self.engine_width + 10, 10))
+        
+        playback_rate_text = loader.get_font(16).render(f"Playback rate: {self.playing_direction:.1f}x", True, "white")
+        self.window.blit(playback_rate_text, (self.window.width - playback_rate_text.width - 10, 10))
         
         # Draw the grid
         start_idx = math.floor(self.scroll_position_x) - 1
@@ -114,7 +134,7 @@ class Sequencer(Frame):
         
         super().draw(surface)
 
-    def update(self, engine, delta):
+    def update(self, engine: Engine, delta: float):
         self.scroll_position_x = exp_decay(self.scroll_position_x, self.scroll_target_x, 15, delta)
         
         if self.dragging_playhead:
@@ -126,7 +146,6 @@ class Sequencer(Frame):
             track.update(delta)
         
         if self.playing_direction != 0:
-            old_beat: int = int(self.current_position)
             self.current_position += delta / self.time_per_beat * self.playing_direction
             if self.current_position <= 0:
                 self.current_position = 0
@@ -138,38 +157,19 @@ class Sequencer(Frame):
                 self.scroll_target_x = max(0, self.current_position - scroll_margin / PIXELS_PER_BEAT)
             elif self.current_position * PIXELS_PER_BEAT > self.scroll_position_x * PIXELS_PER_BEAT + self.window.width - scroll_margin:
                 self.scroll_target_x = self.current_position + scroll_margin / PIXELS_PER_BEAT - self.window.width / PIXELS_PER_BEAT
-            
-            beat: int = int(self.current_position)
 
-            if len(engine.entities) and engine.entities[0].health <= 0:
-                return
-
-            # every beat, loop over the tracks and
-            # some other shit in order to trigger
-            # events/inputs
-            if beat != old_beat:
-                for track in self.tracks:
-                    track_beat: int = beat % track.repeat_length
-                    event_index: int = -1
-                    input_index: int = -1
-                    for i, event in enumerate(track.events):
-                        if track_beat in [event.time + j for j in range(event.duration)]:
-                            event_index = i
-                            input_index = int(track_beat - event.time)
-                            break
-                    new_input: Input = track.events[event_index].inputs[input_index]
-                    if new_input != Input.Empty:
-                        # trigger a function
-                        match new_input:
-                            case Input.Up: engine.move_player(0, -1)
-                            case Input.Down: engine.move_player(0, 1)
-                            case Input.Left: engine.move_player(-1, 0)
-                            case Input.Right: engine.move_player(1, 0)
+        beat: int = int(self.current_position)
+        if beat != self.old_beat:
+            self.old_beat = beat
+            self.playback_manager.check_inputs(beat, engine, self.tracks)
     
     def mouse_over_playhead(self, mouse: tuple[int, int]) -> bool:
         playhead_position = (self.current_position - self.scroll_position_x) * PIXELS_PER_BEAT + MARGIN_LEFT
         padding = 4
-        return (playhead_position - 1 - padding <= mouse[0] <= playhead_position + 1 + padding) and (32 <= mouse[1] <= self.window.height)
+        return (playhead_position - 1 - padding <= mouse[0] <= playhead_position + 1 + padding) and \
+            (32 <= mouse[1] <= self.window.height) or \
+            (32 <= mouse[1] <= 48) or \
+            (self.window.height - 16 <= mouse[1] <= self.window.height)
     
     def on_mouse_down(self, mouse: tuple[int, int]):
         if self.mouse_over_playhead(mouse):

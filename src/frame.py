@@ -18,6 +18,7 @@ class Frame:
 
     def resize(self, width, height):
         self.window = pygame.Surface((width, height))
+        self.rect.size = (width, height)
     
     T = TypeVar('T', bound=Hoverable)
     def add(self, hoverable: T) -> T:

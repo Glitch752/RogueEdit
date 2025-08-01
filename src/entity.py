@@ -1,13 +1,19 @@
 import numpy as np
 from tcod import path
+import typing
+if typing.TYPE_CHECKING:
+    from engine import Engine
 from tile import *
 from utils import exp_decay
+from uuid import UUID, uuid4
 
 def lerp(a, b, t): return a + (b - a) * t
 
 class Entity:
-    def __init__(self, engine, x: int, y: int, tile_index: int, health: int = 999) -> None:
-        self.engine = engine
+    id: UUID
+    
+    def __init__(self, x: int, y: int, tile_index: int, health: int = 999) -> None:
+        self.id = uuid4()
         self.x = x
         self.y = y
         self.show_x = x
@@ -15,17 +21,23 @@ class Entity:
         self.tile_id = tile_index
         self.health = self.max_health = health
 
-    def on_my_turn(self, target_x: int, target_y: int):
+    def on_my_turn(self, engine: "Engine", target_x: int, target_y: int):
         # i hate this but it gets liveshare to shut the fuck up
         pass
 
-    def move(self, dx: int, dy: int):
+    def move(self, engine: "Engine", dx: int, dy: int):
         self.x += dx
         self.y += dy
         try:
-            if self.engine.world[self.y][self.x].solid:
+            if engine.world[self.y][self.x].solid:
                 self.x -= dx
                 self.y -= dy
+            else:
+                for entity in engine.entities.values():
+                    if entity is not self and entity.x == self.x and entity.y == self.y:
+                        self.x -= dx
+                        self.y -= dy
+                        break
         except IndexError:
             self.x -= dx
             self.y -= dy
@@ -33,17 +45,22 @@ class Entity:
     def update(self, delta: float) -> None:
         self.show_x = exp_decay(self.show_x, self.x, 10, delta)
         self.show_y = exp_decay(self.show_y, self.y, 10, delta)
+    
+    def import_state_from(self, other: "Entity"):
+        self.x = other.x
+        self.y = other.y
+        self.health = other.health
 
 class PlayerEntity(Entity):
-    def __init__(self, engine, x: int, y: int) -> None:
-        super().__init__(engine, x, y, 5, 3)
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 5, 3)
 
 class EnemyEntity(Entity):
-    def __init__(self, engine, x: int, y: int, index: int) -> None:
-        super().__init__(engine, x, y, index, 1)
+    def __init__(self, x: int, y: int, index: int) -> None:
+        super().__init__(x, y, index, 1)
 
-    def on_my_turn(self, target_x: int, target_y: int):
-        solids = [[not self.engine.world[y][x].solid for x in range(self.engine.world_width)] for y in range(self.engine.world_height)]
+    def on_my_turn(self, engine: "Engine", target_x: int, target_y: int):
+        solids = [[not engine.world[y][x].solid for x in range(engine.world_width)] for y in range(engine.world_height)]
 
         solids = np.transpose(solids, (1, 0))
 
@@ -59,17 +76,34 @@ class EnemyEntity(Entity):
             dx: int = new_path[0][0] - self.x
             dy: int = new_path[0][1] - self.y
 
-            self.move(dx, dy)
-        elif len(self.engine.entities) and isinstance(self.engine.entities[0], PlayerEntity):
+            self.move(engine, dx, dy)
+        elif engine.player:
             # ATTACK!
-            player = self.engine.entities[0]
+            player = engine.player
             player.health = max(player.health - 1, 0)
             pass
 
 class SnakeEntity(EnemyEntity):
-    def __init__(self, engine, x: int, y: int) -> None:
-        super().__init__(engine, x, y, 20)
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 20)
 
 class RatEntity(EnemyEntity):
-    def __init__(self, engine, x: int, y: int) -> None:
-        super().__init__(engine, x, y, 22)
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 22)
+
+class KeyEntity(Entity):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 90)
+
+class ExitEntity(Entity):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 53)
+
+class DoorEntity(Entity):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, 38)
+        self.open = False
+
+    def open_door(self):
+        self.open = True
+        self.tile_id = 37

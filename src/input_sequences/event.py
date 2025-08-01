@@ -16,6 +16,7 @@ class Input(Enum):
     Down = "down", "down_arrow.png"
     UseItem = "use_item", "swords.png"
     CycleItem = "cycle_item", "cycle.png"
+    Wait = "wait", "wait.png"
     
     icon: str
     
