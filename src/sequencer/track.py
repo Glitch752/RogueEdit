@@ -17,6 +17,7 @@ class TrackColor:
 class Track(Hoverable):
     events: list[Event]
     visualizers: list[EventVisualizer]
+    name: str
     name_text: pygame.Surface
     color: TrackColor
     repeat_length: int
@@ -28,6 +29,7 @@ class Track(Hoverable):
         
         super().__init__()
         
+        self.name = name
         self.name_text = loader.get_font(32).render(name, True, "white")
         self.color = color
         self.repeat_length = repeat_length

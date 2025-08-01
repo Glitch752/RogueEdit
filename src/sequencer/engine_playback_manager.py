@@ -12,12 +12,15 @@ class EnginePlaybackManager:
     def invalidate_after(self, beat: int, engine: Engine):
         """Invalidates all snapshots on and after the specified beat."""
         self.snapshots = self.snapshots[:beat]
-        engine.import_state(self.snapshots[beat - 1] if beat > 0 else None)
+        engine.import_state(self.snapshots[beat])
     
     def check_inputs(self, beat: int, engine: Engine, tracks: list[Track]):
         if beat < len(self.snapshots):
             engine.import_state(self.snapshots[beat])
             return
+        
+        if len(self.snapshots) == 0:
+            self.snapshots.append(engine.export_state())
         
         # Create snapshots until we reach the current beat
         while len(self.snapshots) <= beat:
@@ -34,10 +37,6 @@ class EnginePlaybackManager:
         x_input = 0
         y_input = 0
         
-        if Input.Wait in inputs:
-            engine.move_player(0, 0)
-            return
-        
         for input in inputs:
             match input:
                 case Input.Up: y_input -= 1
@@ -48,21 +47,25 @@ class EnginePlaybackManager:
         
         if x_input != 0 or y_input != 0:
             engine.move_player(x_input, y_input)
+        elif Input.Wait in inputs:
+            engine.move_player(0, 0)
+            return
     
     def get_inputs_at_beat(self, beat: int, tracks: list[Track]) -> set[Input]:
         inputs = set()
         
         for track in tracks:
-            track_beat: int = beat % track.repeat_length
-            event_index: int = -1
-            input_index: int = -1
-            for i, event in enumerate(track.events):
-                if track_beat in [event.time + j for j in range(event.duration)]:
-                    event_index = i
-                    input_index = int(track_beat - event.time)
+            track_beat: int = ((beat - 1) % track.repeat_length) + 1
+            
+            # Find the event with a time and duration that includes the current beat
+            event = None
+            for e in track.events:
+                if e.time < track_beat <= e.time + e.duration:
+                    event = e
                     break
-            new_input: Input = track.events[event_index].inputs[input_index]
-            if new_input != Input.Empty:
-                inputs.add(new_input)
-        
+            if event is not None:
+                input = event.inputs[track_beat - event.time - 1]
+                if input != Input.Empty:
+                    inputs.add(input)
+    
         return inputs

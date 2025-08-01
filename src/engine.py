@@ -39,25 +39,22 @@ class Engine:
     def export_state(self) -> EngineState:
         return EngineState({e.id: deepcopy(e) for e in self.entities.values()})
     
-    def import_state(self, state: Optional[EngineState]):
-        if state is not None:
-            for entity in self.entities.values():
-                if not entity.id in state.entities:
-                    del self.entities[entity.id]
-            
-            for entity in state.entities.values():
-                if entity.id in self.entities:
-                    curr = self.entities[entity.id]
-                    curr.import_state_from(entity)
-                else:
-                    self.entities.update({entity.id: entity})
-            
-            for entity in state.entities:
-                if isinstance(entity, PlayerEntity):
-                    self.player = entity
-                    break
-        else:
-            pass
+    def import_state(self, state: EngineState):
+        for entity in self.entities.values():
+            if not entity.id in state.entities:
+                del self.entities[entity.id]
+        
+        for entity in state.entities.values():
+            if entity.id in self.entities:
+                curr = self.entities[entity.id]
+                curr.import_state_from(entity)
+            else:
+                self.entities.update({entity.id: entity})
+        
+        for entity in state.entities:
+            if isinstance(entity, PlayerEntity):
+                self.player = entity
+                break
 
     def move_player(self, dx: int, dy: int):
         if self.player == None:

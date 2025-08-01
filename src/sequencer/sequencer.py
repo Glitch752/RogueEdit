@@ -42,7 +42,7 @@ class Sequencer(Frame):
         self.fast_forward_icon = self.add(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
         
         self.tracks = [
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.Right]), Event(time=4, duration=1, inputs=[Input.Right])], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
+            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.Right]), Event(time=3, duration=1, inputs=[Input.Right])], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
             self.add(Track([Event(time=0, duration=3, inputs=[Input.Wait, Input.Empty, Input.CycleItem]), Event(time=4, duration=3, inputs=[Input.Right, Input.Empty, Input.Down])], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
             self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.UseItem]), Event(time=4, duration=1, inputs=[Input.Right])], "C", TrackColor("#555599", "#333355", "#555599"), 5))
         ]
@@ -158,7 +158,7 @@ class Sequencer(Frame):
             elif self.current_position * PIXELS_PER_BEAT > self.scroll_position_x * PIXELS_PER_BEAT + self.window.width - scroll_margin:
                 self.scroll_target_x = self.current_position + scroll_margin / PIXELS_PER_BEAT - self.window.width / PIXELS_PER_BEAT
 
-        beat: int = int(self.current_position)
+        beat: int = math.floor(self.current_position)
         if beat != self.old_beat:
             self.old_beat = beat
             self.playback_manager.check_inputs(beat, engine, self.tracks)
