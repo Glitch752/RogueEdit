@@ -79,7 +79,8 @@ def main():
                     # Handle drag-and-drop completion
                     dragged_item = input_sequences.get_dragged_item()
                     if dragged_item and sequencer.rect.collidepoint(mouse):
-                        sequencer.drop()
+                        if sequencer.drop(engine):
+                            input_sequences.dragged_item_dropped()
                     
                     for frame in frames:
                         frame.on_mouse_up((mouse[0] - frame.rect.x, mouse[1] - frame.rect.y))

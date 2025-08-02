@@ -69,6 +69,8 @@ class InputSequences(Frame):
     target_scroll_y: float
     scroll_y: float
     
+    no_events_text: pygame.Surface
+    
     dragged_item: Optional[EventSelector]
     
     def __init__(self, pos: tuple[int, int, int, int]) -> None:
@@ -78,6 +80,8 @@ class InputSequences(Frame):
         self.target_scroll_y = 0.0
         self.scroll_y = 0.0
         self.dragged_item = None
+        
+        self.no_events_text = loader.get_font(20).render("No remaining sequences", True, "gray")
         
         # Define predefined sequences for different levels/scenarios
         self.events = [
@@ -105,7 +109,16 @@ class InputSequences(Frame):
             
             x_offset += event.rect.width + SEQUENCE_WINDOW_PADDING
         
-        self.target_scroll_y = min(self.target_scroll_y, max(0, y_offset + event.rect.height + SEQUENCE_WINDOW_PADDING - self.window.height))
+        if len(self.events) > 0:
+            last_event = self.events[-1]
+            self.target_scroll_y = min(self.target_scroll_y, max(0, y_offset + last_event.rect.height + SEQUENCE_WINDOW_PADDING - self.window.height))
+        else:
+            self.target_scroll_y = 0
+            
+            self.window.blit(
+                self.no_events_text,
+                (self.window.width // 2 - self.no_events_text.get_width() // 2, 64)
+            )
         
         self.window.fill("#333333", (0, 0, self.window.width, 24))
         self.window.blit(self.title_text, (8, 5))
@@ -150,3 +163,11 @@ class InputSequences(Frame):
     def get_dragged_item(self):
         """Returns the currently dragged item, if any"""
         return self.dragged_item
+
+    def dragged_item_dropped(self):
+        """Called when the dragged item is dropped elsewhere"""
+        if self.dragged_item:
+            if self.dragged_item in self.events:
+                self.events.remove(self.dragged_item)
+            self.hoverables.discard(self.dragged_item)
+        self.dragged_item = None

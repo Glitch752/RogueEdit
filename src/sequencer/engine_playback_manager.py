@@ -11,7 +11,10 @@ class EnginePlaybackManager:
     
     def invalidate_after(self, beat: int, engine: Engine):
         """Invalidates all snapshots on and after the specified beat."""
-        self.snapshots = self.snapshots[:beat]
+        if beat >= len(self.snapshots):
+            return
+
+        self.snapshots = self.snapshots[:beat+1]
         engine.import_state(self.snapshots[beat])
     
     def check_inputs(self, beat: int, engine: Engine, tracks: list[Track]):

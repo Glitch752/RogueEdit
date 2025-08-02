@@ -277,7 +277,7 @@ class Sequencer(Frame):
             is_valid=is_valid
         )
     
-    def drop(self) -> bool:
+    def drop(self, engine: Engine) -> bool:
         """Returns if the drop was successful"""
         if self.drop_state == None:
             return False
@@ -311,6 +311,9 @@ class Sequencer(Frame):
         if not inserted:
             track.events.append(new_event)
             track.visualizers.append(EventVisualizer(new_event))
+        
+        self.playback_manager.invalidate_after(new_event.time, engine)
+        self.playback_manager.check_inputs(self.old_beat, engine, self.tracks)
         
         return True
     

@@ -65,7 +65,10 @@ class Track(Hoverable):
                 vis.draw(surface, event_x, y, self.color.repeat_background if i > 0 else self.color.background)
         
         pygame.draw.rect(surface, self.color.title, (0, y, MARGIN_LEFT, TRACK_HEIGHT))
-        surface.blit(self.name_text, (10, y + 8))
+        surface.blit(
+            self.name_text,
+            (MARGIN_LEFT // 2 - self.name_text.width // 2, y + TRACK_HEIGHT // 2 - self.name_text.height // 2 + 5)
+        )
         
     def mouse_move(self, mouse: tuple[int, int]):
         if self.in_self(mouse):
