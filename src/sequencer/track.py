@@ -63,6 +63,7 @@ class Track(Hoverable):
             for vis in self.visualizers:
                 event_x = math.floor(x + vis.event.time * PIXELS_PER_BEAT)
                 vis.draw(surface, event_x, y, self.color.repeat_background if i > 0 else self.color.background)
+            pygame.draw.line(surface, self.color.background, (x-1, y), (x-1, y + TRACK_HEIGHT), 1)
         
         pygame.draw.rect(surface, self.color.title, (0, y, MARGIN_LEFT, TRACK_HEIGHT))
         surface.blit(

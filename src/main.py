@@ -100,6 +100,9 @@ def main():
                         if event.x != 0:
                             scroll = -event.x
                         frame.on_scroll(scroll)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    sequencer.play_pressed()
         
         engine.update(delta)
         sequencer.update(engine, delta)

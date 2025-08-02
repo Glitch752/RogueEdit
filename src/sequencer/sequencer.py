@@ -88,16 +88,21 @@ class Sequencer(Frame):
     
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0
+        self.update_icons()
+    
+    def rewind_pressed(self):
+        self.playing_direction = -1.0 if self.playing_direction == 0.0 else 0.0
+        self.update_icons()
+
+    def fast_forward_pressed(self):
+        self.playing_direction = 2.0 if self.playing_direction == 0.0 else 1.0
+        self.update_icons()
+    
+    def update_icons(self):
         if self.playing_direction != 0:
             self.play_pause_icon.set_icon("pause_icon.png")
         else:
             self.play_pause_icon.set_icon("play_icon.png")
-    
-    def rewind_pressed(self):
-        self.playing_direction = -1.0 if self.playing_direction == 0.0 else 0.0
-
-    def fast_forward_pressed(self):
-        self.playing_direction = 2.0 if self.playing_direction == 0.0 else 1.0
 
     def draw(self, surface: pygame.Surface):
         self.window.fill("#222222")
