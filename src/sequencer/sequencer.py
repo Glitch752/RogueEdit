@@ -1,14 +1,39 @@
+from dataclasses import dataclass
 import math
+from typing import Optional
 import pygame
 from engine import Engine
 from frame import Frame
 from graphics.icon_button import IconButton
 from graphics.asset_loader import loader
-from input_sequences.event import Input
-from sequencer.constants import MARGIN_LEFT, PIXELS_PER_BEAT, TOP_MARGIN
+from input_sequences.event import EventVisualizer
+from input_sequences.input_sequences import EventSelector
+from sequencer.constants import MARGIN_LEFT, PIXELS_PER_BEAT, SECONDS_PER_BEAT, TOP_MARGIN
 from sequencer.engine_playback_manager import EnginePlaybackManager
 from sequencer.track import Event, Track, TrackColor
-from utils import exp_decay
+from utils import exp_decay, format_seconds
+
+TRACK_SPACING = 64
+
+@dataclass
+class DropTarget:
+    """The target for a dropped event."""
+    track: int
+    time: int
+    "In beats."
+    is_valid: bool
+
+@dataclass
+class TimelinePosition:
+    """Any position on the timeline"""
+    track: int
+    time: float
+    
+@dataclass
+class DroppingState:
+    indicator_pos: TimelinePosition
+    visualizer: EventSelector
+    target: DropTarget
 
 class Sequencer(Frame):
     tracks: list[Track]
@@ -25,11 +50,11 @@ class Sequencer(Frame):
     dragging_playhead: bool
     old_beat: int
     
-    time_per_beat: float
     max_length: int
     "In beats."
     
     playback_manager: EnginePlaybackManager
+    drop_state: Optional[DroppingState]
     
     def __init__(self, pos: tuple[int, int, int, int], engine_width: int) -> None:
         super().__init__(pos)
@@ -42,9 +67,9 @@ class Sequencer(Frame):
         self.fast_forward_icon = self.add(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
         
         self.tracks = [
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.Right]), Event(time=3, duration=1, inputs=[Input.Right])], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Wait, Input.Empty, Input.CycleItem]), Event(time=4, duration=3, inputs=[Input.Right, Input.Empty, Input.Down])], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
-            self.add(Track([Event(time=0, duration=3, inputs=[Input.Right, Input.Empty, Input.UseItem]), Event(time=4, duration=1, inputs=[Input.Right])], "C", TrackColor("#555599", "#333355", "#555599"), 5))
+            self.add(Track([], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
+            self.add(Track([], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
+            self.add(Track([], "C", TrackColor("#555599", "#333355", "#555599"), 5))
         ]
 
         self.playing_direction = 0.0
@@ -56,10 +81,10 @@ class Sequencer(Frame):
         self.dragging_playhead = False
         self.old_beat = 0
         
-        self.time_per_beat = 0.5
-        self.max_length = int(60 / self.time_per_beat)
+        self.max_length = int(60 / SECONDS_PER_BEAT)
         
         self.playback_manager = EnginePlaybackManager()
+        self.drop_state = None
     
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0
@@ -74,13 +99,6 @@ class Sequencer(Frame):
     def fast_forward_pressed(self):
         self.playing_direction = 2.0 if self.playing_direction == 0.0 else 1.0
 
-    @staticmethod
-    def format_seconds(duration: float) -> str:
-        minutes = int(duration // 60)
-        seconds = int(duration % 60)
-        milliseconds = int((duration - int(duration)) * 1000)
-        return f"{minutes:02}:{seconds:02}.{milliseconds:03}"
-
     def draw(self, surface: pygame.Surface):
         self.window.fill("#222222")
         pygame.draw.rect(self.window, "#333333", (0, 0, self.window.width, 32))
@@ -91,7 +109,7 @@ class Sequencer(Frame):
         self.rewind_icon.draw(self.window, (icon_center - 64, 0))
         self.fast_forward_icon.draw(self.window, (icon_center + 32, 0))
         
-        time_text = loader.get_font(16).render(f"{self.format_seconds(self.current_position * self.time_per_beat)} / {self.format_seconds(self.max_length * self.time_per_beat)}", True, "white")
+        time_text = loader.get_font(16).render(f"{format_seconds(self.current_position * SECONDS_PER_BEAT)} / {format_seconds(self.max_length * SECONDS_PER_BEAT)}", True, "white")
         self.window.blit(time_text, (self.window.width - self.engine_width + 10, 10))
         
         playback_rate_text = loader.get_font(16).render(f"Playback rate: {self.playing_direction:.1f}x", True, "white")
@@ -116,12 +134,39 @@ class Sequencer(Frame):
                 pygame.draw.line(self.window, "#777777", (x, self.window.height - 16), (x, self.window.height), 1)
             
             if i % 4 == 0:
-                time_text = loader.get_font(12).render(f"{self.format_seconds(i * self.time_per_beat)}", True, "#aaaaaa")
+                time_text = loader.get_font(12).render(f"{format_seconds(i * SECONDS_PER_BEAT)}", True, "#aaaaaa")
                 self.window.blit(time_text, (x + 4, 44))
         
         
         for i, track in enumerate(self.tracks):
-            track.draw(self.window, 32 + TOP_MARGIN + i * 64, self.scroll_position_x)
+            track.draw(self.window, 32 + TOP_MARGIN + i * TRACK_SPACING, self.scroll_position_x)
+        
+        # Draw drop target indicator when dragging
+        if self.drop_state != None:
+            indicator_pos = self.drop_state.indicator_pos
+            target = self.drop_state.target
+            track = self.tracks[indicator_pos.track]
+            
+            drop_y = 32 + TOP_MARGIN + indicator_pos.track * TRACK_SPACING
+            
+            indicator_x = (indicator_pos.time - self.scroll_position_x) * PIXELS_PER_BEAT + MARGIN_LEFT
+            pygame.draw.rect(self.window, track.color.title, (indicator_x - 2, drop_y, 4, 48), 0, 2)
+            pygame.draw.circle(self.window, track.color.title, (int(indicator_x), drop_y + 24), 6, 2)
+            
+            start_idx = math.floor(self.scroll_position_x / track.repeat_length)
+            end_idx = math.ceil((self.scroll_position_x + surface.width / PIXELS_PER_BEAT) / track.repeat_length)
+        
+            for i in range(start_idx, end_idx + 1):
+                drop_x = int(
+                    MARGIN_LEFT + (target.time - self.scroll_position_x) * PIXELS_PER_BEAT +\
+                    i * track.repeat_length * PIXELS_PER_BEAT
+                )
+                # Draw a preview of the event being dropped
+                self.drop_state.visualizer.draw_ghost(
+                    self.window,
+                    drop_x, drop_y, 0.5 if target.is_valid else 0.2,
+                    track.color.repeat_background if i > 0 else track.color.background
+                )
         
         # Draw the playhead
         playhead_position = (self.current_position - self.scroll_position_x) * PIXELS_PER_BEAT + MARGIN_LEFT
@@ -146,7 +191,7 @@ class Sequencer(Frame):
             track.update(delta)
         
         if self.playing_direction != 0:
-            self.current_position += delta / self.time_per_beat * self.playing_direction
+            self.current_position += delta / SECONDS_PER_BEAT * self.playing_direction
             if self.current_position <= 0:
                 self.current_position = 0
                 self.playing_direction = 0.0
@@ -197,3 +242,86 @@ class Sequencer(Frame):
     def on_scroll(self, y: int):
         self.scroll_target_x -= y
         self.scroll_target_x = max(0, self.scroll_target_x)
+    
+    def get_drop_target(self, mouse: tuple[int, int]) -> Optional[TimelinePosition]:
+        if mouse[1] < 32 + TOP_MARGIN:
+            return None
+        
+        track_index = (mouse[1] - 32 - TOP_MARGIN) // TRACK_SPACING
+        if track_index < 0 or track_index >= len(self.tracks):
+            return None
+        
+        track = self.tracks[track_index]
+        
+        time_position = (mouse[0] - MARGIN_LEFT) / PIXELS_PER_BEAT + self.scroll_position_x
+        time_position = max(0, time_position) % track.repeat_length
+        
+        return TimelinePosition(track_index, time_position)
+    
+    def get_event_drop_position(self, indicator: TimelinePosition, event: Event, drag_offset: tuple[int, int]) -> DropTarget:
+        track = self.tracks[indicator.track]
+        time_position = indicator.time - drag_offset[0] / PIXELS_PER_BEAT
+        
+        # Clamp to the track
+        time_position = round(max(0, min(time_position, track.repeat_length - event.duration)))
+        
+        is_valid = True
+        for existing_event in track.events:
+            if not (time_position + event.duration <= existing_event.time or time_position >= existing_event.time + existing_event.duration):
+                is_valid = False
+                break
+        
+        return DropTarget(
+            track=indicator.track,
+            time=int(time_position),
+            is_valid=is_valid
+        )
+    
+    def drop(self) -> bool:
+        """Returns if the drop was successful"""
+        if self.drop_state == None:
+            return False
+        
+        target = self.drop_state.target
+        event = self.drop_state.visualizer.event
+        
+        self.drop_state = None
+        
+        if not target.is_valid:
+            return False
+
+        
+        track = self.tracks[target.track]
+        
+        new_event = Event(
+            time=target.time,
+            duration=event.duration,
+            inputs=event.inputs.copy()
+        )
+        
+        # Insert the event in the correct position
+        inserted = False
+        for i, existing_event in enumerate(track.events):
+            if existing_event.time > new_event.time:
+                track.events.insert(i, new_event)
+                track.visualizers.insert(i, EventVisualizer(new_event))
+                inserted = True
+                break
+        
+        if not inserted:
+            track.events.append(new_event)
+            track.visualizers.append(EventVisualizer(new_event))
+        
+        return True
+    
+    def update_drop_target(self, mouse: tuple[int, int], visualizer: EventSelector):
+        """Update the drop target visualization"""
+        target = self.get_drop_target(mouse)
+        if target == None:
+            self.drop_state = None
+        else:
+            self.drop_state = DroppingState(
+                target,
+                visualizer,
+                self.get_event_drop_position(target, visualizer.event, visualizer.drag_offset)
+            )

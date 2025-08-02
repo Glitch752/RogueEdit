@@ -53,7 +53,7 @@ class Track(Hoverable):
         pygame.draw.rect(surface, self.color.background, (-scroll_position_x * PIXELS_PER_BEAT, y, width, TRACK_HEIGHT), 2)
 
         start_idx = math.floor(scroll_position_x / self.repeat_length)
-        end_idx = math.ceil((scroll_position_x + surface.width / PIXELS_PER_BEAT) / self.repeat_length)\
+        end_idx = math.ceil((scroll_position_x + surface.width / PIXELS_PER_BEAT) / self.repeat_length)
         
         for vis in self.visualizers:
             vis.reset()
