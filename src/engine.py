@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import pygame
 import random
 from typing import Optional
+from gameitem import GameItem
 
 random.seed(69)
 
@@ -20,6 +21,7 @@ GRID_HEIGHT = 18
 @dataclass
 class EngineState:
     entities: dict[UUID, Entity]
+    items: list[GameItem]
 
 class Engine:
     entities: dict[UUID, Entity]
@@ -27,6 +29,8 @@ class Engine:
     def __init__(self, tilemap: pygame.Surface, width=GRID_WIDTH, height=GRID_HEIGHT) -> None:
         self.world_width, self.world_height = width, height
         self.tilemap = tilemap
+
+        self.items: list[GameItem] = []
 
         self.window = pygame.Surface((GRID_WIDTH * TILE_WIDTH, GRID_HEIGHT * TILE_HEIGHT))
         self.world = [[EmptyTile(x, y) for x in range(self.world_width)] for y in range(self.world_height)]
@@ -37,7 +41,7 @@ class Engine:
         self.camera_y: float = 0
     
     def export_state(self) -> EngineState:
-        return EngineState({e.id: deepcopy(e) for e in self.entities.values()})
+        return EngineState({e.id: deepcopy(e) for e in self.entities.values()}, self.items.copy())
     
     def import_state(self, state: EngineState):
         for entity in self.entities.values():
@@ -60,6 +64,8 @@ class Engine:
             if isinstance(entity, PlayerEntity):
                 self.player = entity
                 break
+        
+        self.items = state.items.copy()
 
     def move_player(self, dx: int, dy: int):
         if self.player == None:
@@ -69,6 +75,12 @@ class Engine:
 
         if isinstance(e, EnemyEntity):
             self.entities.pop(e.id)
+        elif isinstance(e, KeyEntity):
+            self.entities.pop(e.id)
+
+            for e in self.entities:
+                if isinstance(self.entities[e], DoorEntity):
+                    self.entities[e].open_door()
 
         for entity in filter(lambda e: isinstance(e, EnemyEntity), self.entities.values()):
             entity.on_my_turn(self, self.player.x, self.player.y)

@@ -23,7 +23,7 @@ def main():
 
     width, height = WIN.size
 
-    current_puzzle: int = 0
+    current_puzzle: int = 1
     engine = puzzles[current_puzzle].make_engine(TILEMAP)
     engine_scale = 3
     engine_width = engine.window.width * engine_scale

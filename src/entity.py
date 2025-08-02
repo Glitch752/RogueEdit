@@ -37,6 +37,8 @@ class Entity:
             else:
                 for entity in engine.entities.values():
                     if entity is not self and entity.x == self.x and entity.y == self.y:
+                        if isinstance(entity, DoorEntity) and entity.open:
+                            continue
                         self.x -= dx
                         self.y -= dy
                         return entity
