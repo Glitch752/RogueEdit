@@ -2,8 +2,8 @@ from typing import Optional
 import pygame
 from frame import Frame
 from graphics.asset_loader import loader
-from input_sequences.event import Event, Input, EventVisualizer
-from sequencer.constants import PIXELS_PER_BEAT, SECONDS_PER_BEAT
+from input_sequences.event import Event, EventId, Input, EventVisualizer, get_next_event_id
+from sequencer.constants import SECONDS_PER_BEAT
 from utils import exp_decay, format_seconds
 
 EVENT_SELECTOR_PADDING = 5
@@ -14,9 +14,16 @@ class EventSelector(EventVisualizer):
     dragging: bool
     drag_offset: tuple[int, int]
     title_text: pygame.Surface
+    visible: bool
     
-    def __init__(self, event: Event):
-        super().__init__(event)
+    def __init__(self, inputs: list[Input]):
+        super().__init__(Event(
+            id=get_next_event_id(),
+            time=0,
+            duration=len(inputs),
+            inputs=inputs
+        ))
+        self.visible = True
         self.dragging = False
         self.drag_offset = (0, 0)
         self.title_text = loader.get_font(17).render(f"{format_seconds(self.event.duration * SECONDS_PER_BEAT, True)}s", True, "gray")
@@ -61,7 +68,7 @@ class EventSelector(EventVisualizer):
         super().draw(surface, x + EVENT_SELECTOR_PADDING, y + EVENT_SELECTOR_PADDING + EVENT_SELECTOR_HEADER, "#777777")
     
     def in_self(self, point: tuple[int, int]) -> bool:
-        return self.rect.collidepoint(point)
+        return self.visible and self.rect.collidepoint(point)
 
 class InputSequences(Frame):
     events: list[EventSelector]
@@ -85,12 +92,12 @@ class InputSequences(Frame):
         
         # Define predefined sequences for different levels/scenarios
         self.events = [
-            self.add(EventSelector(Event(time=0, duration=2, inputs=[Input.Right, Input.UseItem]))),
-            self.add(EventSelector(Event(time=0, duration=2, inputs=[Input.Right, Input.UseItem]))),
-            self.add(EventSelector(Event(time=0, duration=3, inputs=[Input.UseItem, Input.UseItem, Input.UseItem]))),
-            self.add(EventSelector(Event(time=0, duration=4, inputs=[Input.Left, Input.Up, Input.Right, Input.Down]))),
-            self.add(EventSelector(Event(time=0, duration=4, inputs=[Input.Left, Input.Up, Input.Right, Input.Down]))),
-            self.add(EventSelector(Event(time=0, duration=1, inputs=[Input.Wait])))
+            self.add(EventSelector([Input.Right, Input.UseItem])),
+            self.add(EventSelector([Input.Right, Input.UseItem])),
+            self.add(EventSelector([Input.UseItem, Input.UseItem, Input.UseItem])),
+            self.add(EventSelector([Input.Left, Input.Up, Input.Right, Input.Down])),
+            self.add(EventSelector([Input.Left, Input.Up, Input.Right, Input.Down])),
+            self.add(EventSelector([Input.Wait]))
         ]
     
     def draw(self, surface: pygame.Surface):
@@ -99,7 +106,12 @@ class InputSequences(Frame):
         y_offset = 24 + SEQUENCE_WINDOW_PADDING - int(self.scroll_y)
         x_offset = SEQUENCE_WINDOW_PADDING
         
+        drawn = 0
         for i, event in enumerate(self.events):
+            if not event.visible:
+                continue
+            drawn += 1
+            
             # Flex-ish wrapping layout (ish?)
             if x_offset + event.rect.width > self.window.width - SEQUENCE_WINDOW_PADDING:
                 x_offset = SEQUENCE_WINDOW_PADDING
@@ -109,7 +121,7 @@ class InputSequences(Frame):
             
             x_offset += event.rect.width + SEQUENCE_WINDOW_PADDING
         
-        if len(self.events) > 0:
+        if drawn > 0:
             last_event = self.events[-1]
             self.target_scroll_y = min(self.target_scroll_y, max(0, y_offset + last_event.rect.height + SEQUENCE_WINDOW_PADDING - self.window.height))
         else:
@@ -142,7 +154,7 @@ class InputSequences(Frame):
             
     def on_mouse_down(self, mouse: tuple[int, int]):
         for event in self.events:
-            if event.rect.collidepoint(mouse):
+            if event.in_self(mouse):
                 event.start_drag(mouse)
                 self.dragged_item = event
                 return
@@ -167,7 +179,18 @@ class InputSequences(Frame):
     def dragged_item_dropped(self):
         """Called when the dragged item is dropped elsewhere"""
         if self.dragged_item:
-            if self.dragged_item in self.events:
-                self.events.remove(self.dragged_item)
-            self.hoverables.discard(self.dragged_item)
+            self.dragged_item.visible = False
         self.dragged_item = None
+    
+    def begin_drag(self, event_id: EventId, drag_offset: tuple[int, int]) -> Optional[EventSelector]:
+        """Begins dragging an event from the sequencer, e.g. one that is hidden on our side"""
+        if self.dragged_item:
+            return
+        
+        matching_selector = next((e for e in self.events if e.event.id == event_id), None)
+        if matching_selector:
+            self.dragged_item = matching_selector
+            matching_selector.visible = True
+            matching_selector.dragging = True
+            matching_selector.drag_offset = drag_offset
+        return matching_selector

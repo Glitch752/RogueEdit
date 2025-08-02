@@ -26,8 +26,19 @@ class Input(Enum):
         member.icon = icon
         return member
 
+class EventId(int):
+    def __str__(self):
+        return f"Event {self}"
+
+next_id = 0
+def get_next_event_id() -> EventId:
+    global next_id
+    next_id += 1
+    return EventId(next_id)
+
 @dataclass
 class Event:
+    id: EventId
     inputs: list[Input]
     time: int
     duration: int

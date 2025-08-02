@@ -6,7 +6,7 @@ from engine import Engine
 from frame import Frame
 from graphics.icon_button import IconButton
 from graphics.asset_loader import loader
-from input_sequences.event import EventVisualizer
+from input_sequences.event import EventId, EventVisualizer
 from input_sequences.input_sequences import EventSelector
 from sequencer.constants import MARGIN_LEFT, PIXELS_PER_BEAT, SECONDS_PER_BEAT, TOP_MARGIN
 from sequencer.engine_playback_manager import EnginePlaybackManager
@@ -223,6 +223,22 @@ class Sequencer(Frame):
         
         return super().on_mouse_down(mouse)
 
+    def check_drag_start(self, mouse: tuple[int, int], engine: Engine) -> Optional[tuple[EventId, tuple[int, int]]]:
+        for track in self.tracks:
+            for vis in track.visualizers:
+                for rect in vis.rects:
+                    if rect.collidepoint(mouse):
+                        drag_offset = (mouse[0] - rect.x, mouse[1] - rect.y)
+                        # Remove the item
+                        track.events.remove(vis.event)
+                        track.visualizers.remove(vis)
+                        
+                        self.playback_manager.invalidate_after(vis.event.time, engine)
+                        self.playback_manager.check_inputs(self.old_beat, engine, self.tracks)
+                        
+                        return (vis.event.id, drag_offset)
+        return None
+
     def on_mouse_up(self, mouse: tuple[int, int]):
         if self.dragging_playhead:
             self.dragging_playhead = False
@@ -294,6 +310,7 @@ class Sequencer(Frame):
         track = self.tracks[target.track]
         
         new_event = Event(
+            id=event.id,
             time=target.time,
             duration=event.duration,
             inputs=event.inputs.copy()

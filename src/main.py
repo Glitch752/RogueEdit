@@ -68,9 +68,18 @@ def main():
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
+                    mouse = pygame.mouse.get_pos()
+                    
+                    # Handle drag-and-drop start
+                    if sequencer.rect.collidepoint(mouse):
+                        sequencer_mouse = (mouse[0] - sequencer.rect.x, mouse[1] - sequencer.rect.y)
+                        drag = sequencer.check_drag_start(sequencer_mouse, engine)
+                        if drag:
+                            if selector := input_sequences.begin_drag(*drag):
+                                sequencer.update_drop_target(sequencer_mouse, selector)
+                    
                     for frame in frames:
                         if frame.mouse_over():
-                            mouse = pygame.mouse.get_pos()
                             frame.on_mouse_down((mouse[0] - frame.rect.x, mouse[1] - frame.rect.y))
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
