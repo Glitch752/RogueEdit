@@ -26,8 +26,19 @@ class Input(Enum):
         member.icon = icon
         return member
 
+class EventId(int):
+    def __str__(self):
+        return f"Event {self}"
+
+next_id = 0
+def get_next_event_id() -> EventId:
+    global next_id
+    next_id += 1
+    return EventId(next_id)
+
 @dataclass
 class Event:
+    id: EventId
     inputs: list[Input]
     time: int
     duration: int
@@ -52,10 +63,14 @@ class EventVisualizer(Hoverable):
     def reset(self):
         self.rects = []
     
-    def draw(self, surface: pygame.Surface, x: int, y: int, color: str):
+    def get_rect(self, x: int, y: int):
         event_width = self.event.duration * PIXELS_PER_BEAT
+        return pygame.Rect(x, y, event_width, TRACK_HEIGHT)
+    
+    def draw(self, surface: pygame.Surface, x: int, y: int, color: str):
         float_height = math.floor(self.float_height)
-        self.rects.append(pygame.Rect(x, y, event_width, TRACK_HEIGHT))
+        self.rects.append(self.get_rect(x, y))
+        event_width = self.event.duration * PIXELS_PER_BEAT
         pygame.draw.rect(surface, "#111111", (x + 3, y + 3, event_width - 6, TRACK_HEIGHT - 6), 0, 10)
         pygame.draw.rect(surface, color, (x + 3, y + 3 - float_height, event_width - 6, TRACK_HEIGHT - 9), 0, 10)
         for i, input in enumerate(self.event.inputs):
