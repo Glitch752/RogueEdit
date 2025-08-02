@@ -20,12 +20,14 @@ class Entity:
         self.show_y = y
         self.tile_id = tile_index
         self.health = self.max_health = health
+        self.marked_for_death = False
 
     def on_my_turn(self, engine: "Engine", target_x: int, target_y: int):
         # i hate this but it gets liveshare to shut the fuck up
         pass
 
     def move(self, engine: "Engine", dx: int, dy: int):
+        # returns the entity that gets collided with on move
         self.x += dx
         self.y += dy
         try:
@@ -37,10 +39,11 @@ class Entity:
                     if entity is not self and entity.x == self.x and entity.y == self.y:
                         self.x -= dx
                         self.y -= dy
-                        break
+                        return entity
         except IndexError:
             self.x -= dx
             self.y -= dy
+        return None
 
     def update(self, delta: float) -> None:
         self.show_x = exp_decay(self.show_x, self.x, 10, delta)

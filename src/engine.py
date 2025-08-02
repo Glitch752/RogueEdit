@@ -42,7 +42,12 @@ class Engine:
     def import_state(self, state: EngineState):
         for entity in self.entities.values():
             if not entity.id in state.entities:
-                del self.entities[entity.id]
+                self.entities[entity.id].marked_for_death = True
+        
+        for i in range(len(self.entities.keys()) - 1, -1, -1):
+            e = list(self.entities.keys())[i]
+            if self.entities[e].marked_for_death:
+                self.entities.pop(e)
         
         for entity in state.entities.values():
             if entity.id in self.entities:
@@ -60,7 +65,10 @@ class Engine:
         if self.player == None:
             return
         
-        self.player.move(self, dx, dy)
+        e: Entity = self.player.move(self, dx, dy)
+
+        if isinstance(e, EnemyEntity):
+            self.entities.pop(e.id)
 
         for entity in filter(lambda e: isinstance(e, EnemyEntity), self.entities.values()):
             entity.on_my_turn(self, self.player.x, self.player.y)
