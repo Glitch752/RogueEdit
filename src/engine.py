@@ -71,7 +71,7 @@ class Engine:
         if self.player == None:
             return
         
-        e: Entity = self.player.move(self, dx, dy)
+        e = self.player.move(self, dx, dy)
 
         if isinstance(e, EnemyEntity):
             self.entities.pop(e.id)
@@ -79,8 +79,9 @@ class Engine:
             self.entities.pop(e.id)
 
             for e in self.entities:
-                if isinstance(self.entities[e], DoorEntity):
-                    self.entities[e].open_door()
+                entity = self.entities[e]
+                if isinstance(entity, DoorEntity):
+                    entity.open_door()
 
         for entity in filter(lambda e: isinstance(e, EnemyEntity), self.entities.values()):
             entity.on_my_turn(self, self.player.x, self.player.y)

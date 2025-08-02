@@ -26,8 +26,9 @@ class Entity:
         # i hate this but it gets liveshare to shut the fuck up
         pass
 
-    def move(self, engine: "Engine", dx: int, dy: int):
-        # returns the entity that gets collided with on move
+    def move(self, engine: "Engine", dx: int, dy: int) -> typing.Optional["Entity"]:
+        """returns the entity that gets collided with on move"""
+        
         self.x += dx
         self.y += dy
         try:
@@ -111,4 +112,13 @@ class DoorEntity(Entity):
 
     def open_door(self):
         self.open = True
-        self.tile_id = 21
+        self.update_tile()
+    
+    def update_tile(self):
+        self.tile_id = 21 if self.open else 22
+    
+    def import_state_from(self, other: "Entity"):
+        super().import_state_from(other)
+        if isinstance(other, DoorEntity):
+            self.open = other.open
+            self.update_tile()
