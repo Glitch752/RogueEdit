@@ -13,7 +13,7 @@ MIN_WIDTH = 1280
 MIN_HEIGHT = 720
 WIN = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 
-TILEMAP = pygame.image.load("kenney_micro-roguelike/colored_tilemap_packed.png").convert_alpha()
+TILEMAP = pygame.image.load("assets/tilemap.png").convert_alpha()
 
 def main():
     global WIN

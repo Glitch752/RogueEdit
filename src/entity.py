@@ -53,7 +53,7 @@ class Entity:
 
 class PlayerEntity(Entity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 5, 3)
+        super().__init__(x, y, 17, 3)
 
 class EnemyEntity(Entity):
     def __init__(self, x: int, y: int, index: int) -> None:
@@ -85,25 +85,25 @@ class EnemyEntity(Entity):
 
 class SnakeEntity(EnemyEntity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 20)
+        super().__init__(x, y, 8)
 
 class RatEntity(EnemyEntity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 22)
+        super().__init__(x, y, 6)
 
 class KeyEntity(Entity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 90)
+        super().__init__(x, y, 26)
 
 class ExitEntity(Entity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 53)
+        super().__init__(x, y, 35)
 
 class DoorEntity(Entity):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, 38)
+        super().__init__(x, y, 22)
         self.open = False
 
     def open_door(self):
         self.open = True
-        self.tile_id = 37
+        self.tile_id = 21

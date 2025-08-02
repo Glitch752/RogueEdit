@@ -11,7 +11,7 @@ from utils import clamp
 
 from copy import deepcopy
 
-TILES_PER_ROW = 16
+TILES_PER_ROW = 9
 TILE_WIDTH = 8
 TILE_HEIGHT = 8
 GRID_WIDTH = 32
@@ -95,6 +95,6 @@ class Engine:
         # HUD
         if self.player is not None:
             for x in range(self.player.health):
-                self.draw_tile(x * 1.5 + 0.5, 0.5, 102)
+                self.draw_tile(x * 1.5 + 0.5, 0.5, 24)
             for x in range(self.player.max_health - self.player.health):
-                self.draw_tile((self.player.health + x) * 1.5 + 0.5, 0.5, 100)
+                self.draw_tile((self.player.health + x) * 1.5 + 0.5, 0.5, 25)

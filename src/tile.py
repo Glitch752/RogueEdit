@@ -13,24 +13,36 @@ class Tile:
     
 class EmptyTile(Tile):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, False, random.randint(68, 69))
+        super().__init__(x, y, False, random.randint(10, 13))
 
 class WallTile(Tile):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, True, 1)
+        super().__init__(x, y, True, 20)
+
+class BackWallTile(Tile):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, True, 2)
 
 class LeftVerticalWallTile(Tile):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, True, 16)
+        super().__init__(x, y, True, 9)
 
 class RightVerticalWallTile(Tile):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, True, 19)
+        super().__init__(x, y, True, 14)
 
-class CornerLeftTile(Tile):
+class FrontCornerLeftTile(Tile):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, True, 18)
+
+class FrontCornerRightTile(Tile):
+    def __init__(self, x: int, y: int) -> None:
+        super().__init__(x, y, True, 23)
+
+class BackCornerLeftTile(Tile):
     def __init__(self, x: int, y: int) -> None:
         super().__init__(x, y, True, 0)
 
-class CornerRightTile(Tile):
+class BackCornerRightTile(Tile):
     def __init__(self, x: int, y: int) -> None:
-        super().__init__(x, y, True, 3)
+        super().__init__(x, y, True, 5)
