@@ -66,9 +66,9 @@ puzzles = [
     Puzzle("IDK", [
             "##################################################",
             "#................................................#",
-            "#.............#####..............................#",
-            "#.............#...#.....####.....................#",
-            "#.............#####.....#..#.....................#",
+            "#.............#######............................#",
+            "#.............#.....#.....####...................#",
+            "#.............###d###.....#..#...................#",
             "#.......................#..#.....................#",
             "#.......................####.....................#",
             "#................................................#",
@@ -76,10 +76,10 @@ puzzles = [
             "#..p.............s...............................#",
             "#................................................#",
             "#................................................#",
-            "#................................................#",
-            "#................................................#",
-            "#................................................#",
-            "#................................................#",
+            "#........##########..............................#",
+            "#........#........#..............................#",
+            "#........#........#..............................#",
+            "#........##########..............................#",
             "#................................................#",
             "#................................................#",
             "##################################################",
@@ -109,7 +109,7 @@ puzzles = [
     )
 ]
 
-# TURN BACK NOW
+# TURN BACK NOW PLEASE
 
 wall_types = {
     WallTile: 1, # Default wall tile
@@ -122,35 +122,24 @@ wall_types = {
 
 # hey im really sorry this shit is ugly af and almost 100% not how either of you would likely do this, sorry for wasting time on it, its just really late and i cant make myself put this off until tommorow :sob:
 def contextualize(world, grid, width, height):
-        # contextualized_world = [[world[y][x] for x in range(width)] for y in range(height)]
+        # contextualized_world = [[world[y][x] for x in range(width)] for y in range(height)] # I was originally going to do this
         contextualized_world = world
         sample_range = 3
         for y, line in enumerate(grid):
             for x, tile in enumerate(line):
                 if isinstance(world[y][x], WallTile):
-                    # print(f"X,Y: ({x},{y}) | Width, Height: ({width}, {height})")
                     nearby_tiles = [[0 for _ in range(sample_range)] for _ in range(sample_range)]
                     for index in range(sample_range ** 2):
                         i = index // sample_range
                         j = index % sample_range
                         i_x = (i+x-1)
                         i_y = (j+y-1)
-                        # if i_x<=0 or i_y<=0 or i_x>=(width) or i_y>=(height):
-                        #     pass
-                        # else:
-                        #     if type(world[i_y][i_x]) in wall_types:
-                        #         print("1")
-                        #         nearby_tiles[j][i] = wall_types[type(world[i_y][i_x])]
-                        #     else:
-                        #         print("0")
-                        #         nearby_tiles[j][i] = 0
 
+                        # help meeee -_-
                         try:
                             if type(world[i_y][i_x]) in wall_types:
-                                print("1")
                                 nearby_tiles[j][i] = wall_types[type(world[i_y][i_x])]
                             else:
-                                print("0")
                                 nearby_tiles[j][i] = 0
                         except IndexError:
                             nearby_tiles[j][i] = 0
@@ -159,11 +148,7 @@ def contextualize(world, grid, width, height):
                             #     nearby_tiles[j][i] = 1
                                 # nearby_tiles[j][i] = [i_x, i_y]
                         
-                    # print(nearby_tiles)
                     wall = None
-                    # print(f"X, Y: ({x}, {y})")
-                    # print(f"{nearby_tiles}\n")
-                    # print(f"At ({x},{y}): {nearby_tiles}")
                     match nearby_tiles:
                         case [
                             [_, _, _],
