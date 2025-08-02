@@ -23,13 +23,23 @@ def main():
 
     width, height = WIN.size
 
-    current_puzzle: int = 1
+    current_puzzle: int = 0
     engine = puzzles[current_puzzle].make_engine(TILEMAP)
     engine_scale = 3
     engine_width = engine.window.width * engine_scale
     engine_height = engine.window.height * engine_scale
-    sequencer = Sequencer((0, engine_height, width, height - engine_height), engine_width)
-    input_sequences = InputSequences((0, 0, width - engine_width, engine_height))
+    sequencer = puzzles[current_puzzle].make_sequencer((0, engine_height, width, height - engine_height), engine_width)
+    input_sequences = puzzles[current_puzzle].make_input_sequences((0, 0, width - engine_width, engine_height))
+    
+    def advance_puzzle():
+        nonlocal current_puzzle, engine, sequencer, input_sequences
+        current_puzzle += 1
+        if current_puzzle >= len(puzzles):
+            # idk, win screen?
+            raise NotImplementedError("No more puzzles available")
+        p = puzzles[current_puzzle]
+        engine = p.make_engine(TILEMAP)
+        p.update(sequencer, input_sequences)
     
     frames: list[Frame] = [sequencer, input_sequences]
 
@@ -104,7 +114,11 @@ def main():
                 if event.key == pygame.K_SPACE:
                     sequencer.play_pressed()
         
+        if engine.all_entities_dead():
+            advance_puzzle()
+        
         engine.update(delta)
+        
         sequencer.update(engine, delta)
         input_sequences.update(delta)
 

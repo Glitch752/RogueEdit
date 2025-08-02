@@ -25,6 +25,9 @@ class Frame:
         self.hoverables.add(hoverable)
         return hoverable
 
+    def remove(self, hoverable: Hoverable):
+        self.hoverables.discard(hoverable)
+
     def mouse_over(self):
         return self.rect.collidepoint(pygame.mouse.get_pos())
 

@@ -66,11 +66,7 @@ class Sequencer(Frame):
         self.rewind_icon = self.add(IconButton("rewind_icon.png", self.rewind_pressed))
         self.fast_forward_icon = self.add(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
         
-        self.tracks = [
-            self.add(Track([], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
-            self.add(Track([], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
-            self.add(Track([], "C", TrackColor("#555599", "#333355", "#555599"), 5))
-        ]
+        self.tracks = []
 
         self.playing_direction = 0.0
         
@@ -85,6 +81,14 @@ class Sequencer(Frame):
         
         self.playback_manager = EnginePlaybackManager()
         self.drop_state = None
+    
+    def set_tracks(self, tracks: list[Track]):
+        for track in self.tracks:
+            self.remove(track)
+        self.tracks.clear()
+        
+        for track in tracks:
+            self.tracks.append(self.add(track))
     
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0

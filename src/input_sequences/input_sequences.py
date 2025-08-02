@@ -91,14 +91,13 @@ class InputSequences(Frame):
         self.no_events_text = loader.get_font(20).render("No remaining sequences", True, "gray")
         
         # Define predefined sequences for different levels/scenarios
-        self.events = [
-            self.add(EventSelector([Input.Right, Input.UseItem])),
-            self.add(EventSelector([Input.Right, Input.UseItem])),
-            self.add(EventSelector([Input.UseItem, Input.UseItem, Input.UseItem])),
-            self.add(EventSelector([Input.Left, Input.Up, Input.Right, Input.Down])),
-            self.add(EventSelector([Input.Left, Input.Up, Input.Right, Input.Down])),
-            self.add(EventSelector([Input.Wait]))
-        ]
+        self.events = []
+    
+    def set_events(self, events: list[list[Input]]):
+        for event in self.events:
+            self.remove(event)
+        
+        self.events = [self.add(EventSelector(inputs)) for inputs in events]
     
     def draw(self, surface: pygame.Surface):
         self.window.fill("#222222")

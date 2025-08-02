@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from pygame import Surface
 from engine import Engine
+from input_sequences.event import Input
+from input_sequences.input_sequences import InputSequences
+from sequencer.sequencer import Sequencer
+from sequencer.track import Track, TrackColor
 from tile import EmptyTile, WallTile, LeftVerticalWallTile, RightVerticalWallTile, FrontCornerLeftTile, FrontCornerRightTile, BackCornerLeftTile, BackCornerRightTile, BackWallTile
 from entity import PlayerEntity, SnakeEntity, RatEntity, KeyEntity, DoorEntity, ExitEntity
-from typing import Any
 
 CONTEXTUALIZED_WALLS = True
 
@@ -32,6 +35,8 @@ all_entities = {
 class Puzzle:
     name: str
     grid: list[str]
+    input_sequences: list[list[Input]]
+    track_lengths: list[int]
 
     def make_engine(self, tilemap: Surface) -> Engine:
         width, height = len(self.grid[0]), len(self.grid)
@@ -61,6 +66,41 @@ class Puzzle:
         engine.world = contextualize(self.world, self.grid, width, height) if CONTEXTUALIZED_WALLS else self.world
         # engine.world = self.world
         return engine
+
+    def make_sequencer(self, pos: tuple[int, int, int, int], engine_width: int):
+        sequencer = Sequencer(pos, engine_width)
+        self.update_sequencer(sequencer)
+        
+        return sequencer
+
+    def update_sequencer(self, sequencer: Sequencer):
+        track_datas: list[tuple[str, TrackColor]] = [
+            ("A", TrackColor("#995555", "#553333", "#995555")),
+            ("B", TrackColor("#559955", "#335533", "#559955")),
+            ("C", TrackColor("#555599", "#333355", "#555599"))
+        ]
+        
+        
+        # self.add(Track([], "A", TrackColor("#995555", "#553333", "#995555"), 11)),
+        # self.add(Track([], "B", TrackColor("#559955", "#335533", "#559955"), 7)),
+        # self.add(Track([], "C", TrackColor("#555599", "#333355", "#555599"), 5))
+        
+        if len(self.track_lengths) > len(track_datas):
+            raise ValueError("idk add some more tracks in puzzle.py")
+        
+        sequencer.set_tracks([
+            Track([], *track_datas[i], length) for i, length in enumerate(self.track_lengths)
+        ])
+
+    def make_input_sequences(self, pos: tuple[int, int, int, int]):
+        input_sequences = InputSequences(pos)
+        input_sequences.set_events(self.input_sequences)
+        
+        return input_sequences
+    
+    def update(self, sequencer: Sequencer, input_sequences: InputSequences):
+        self.update_sequencer(sequencer)
+        input_sequences.set_events(self.input_sequences)
     
 puzzles = [
     Puzzle("Beginnings", [
@@ -82,8 +122,11 @@ puzzles = [
             "#........##########............#",
             "#..............................#",
             "################################",
-        ]
-    ),
+        ], [
+            [Input.Right],
+            [Input.Left],
+            [Input.Wait]
+        ], [5]),
     Puzzle("Locked Door", [
             "################################",
             "#..............................#",
@@ -103,8 +146,11 @@ puzzles = [
             "#........##########............#",
             "#..............................#",
             "################################",
-        ]
-    ),
+        ], [
+            [Input.Right, Input.Up],
+            [Input.Left, Input.Down],
+            [Input.Wait]
+        ],  [5]),
 ]
 
 # TURN BACK NOW PLEASE
