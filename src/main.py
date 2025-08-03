@@ -1,5 +1,12 @@
+# /// script
+# dependencies = [
+#  "tcod"
+# ]
+# ///
+
 import platform
 import pygame
+import asyncio
 
 from utils import is_web
 
@@ -29,7 +36,7 @@ else:
 
 TILEMAP = pygame.image.load("assets/tilemap.png").convert_alpha()
 
-def main():
+async def main():
     global WIN_SURFACE
     
     delta: float = 0.0
@@ -148,6 +155,8 @@ def main():
     while running:
         delta = clock.tick_busy_loop(60.0) / 1000
         delta = min(delta, 1 / 30)
+        
+        await asyncio.sleep(0)
 
         for event in pygame.event.get():
             handle_event(event)
@@ -193,4 +202,4 @@ def main():
     pygame.quit()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
