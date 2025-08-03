@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import math
-from typing import Optional
+from typing import Callable, Optional
 import pygame
 from engine import Engine
 from frame import Frame
@@ -56,7 +56,7 @@ class Sequencer(Frame):
     playback_manager: EnginePlaybackManager
     drop_state: Optional[DroppingState]
     
-    def __init__(self, pos: tuple[int, int, int, int], engine_width: int) -> None:
+    def __init__(self, pos: tuple[int, int, int, int], engine_width: int, engine: Engine, next_level_pressed: Callable) -> None:
         super().__init__(pos)
         
         self.engine_width = engine_width
@@ -65,6 +65,7 @@ class Sequencer(Frame):
         self.play_pause_icon = self.add(IconButton("play_icon.png", self.play_pressed))
         self.rewind_icon = self.add(IconButton("rewind_icon.png", self.rewind_pressed))
         self.fast_forward_icon = self.add(IconButton("fast_forward_icon.png", self.fast_forward_pressed))
+        self.next_level_icon = self.add(IconButton("next.png", next_level_pressed))
         
         self.tracks = []
 
@@ -79,7 +80,7 @@ class Sequencer(Frame):
         
         self.max_length = int(60 / SECONDS_PER_BEAT)
         
-        self.playback_manager = EnginePlaybackManager()
+        self.playback_manager = EnginePlaybackManager(engine.export_state())
         self.drop_state = None
     
     def set_tracks(self, tracks: list[Track]):
@@ -94,8 +95,8 @@ class Sequencer(Frame):
         self.playing_direction = 0.0
         self.update_icons()
         self.current_position = 0.0
+        self.dragging_playhead = False
         self.scroll_target_x = 0.0
-        self.playback_manager.reset()
     
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0
@@ -124,6 +125,7 @@ class Sequencer(Frame):
         self.play_pause_icon.draw(self.window, (icon_center - 16, 0))
         self.rewind_icon.draw(self.window, (icon_center - 64, 0))
         self.fast_forward_icon.draw(self.window, (icon_center + 32, 0))
+        self.next_level_icon.draw(self.window, (icon_center + 96, 0))
         
         time_text = loader.get_font(16).render(f"{format_seconds(self.current_position * SECONDS_PER_BEAT)} / {format_seconds(self.max_length * SECONDS_PER_BEAT)}", True, "white")
         self.window.blit(time_text, (self.window.width - self.engine_width + 10, 10))
@@ -222,7 +224,7 @@ class Sequencer(Frame):
         beat: int = math.floor(self.current_position)
         if beat != self.old_beat:
             self.old_beat = beat
-            self.playback_manager.check_inputs(beat, engine, self.tracks)
+            self.playback_manager.recompute(beat, engine, self.tracks)
     
     def mouse_over_playhead(self, mouse: tuple[int, int]) -> bool:
         playhead_position = (self.current_position - self.scroll_position_x) * PIXELS_PER_BEAT + MARGIN_LEFT
@@ -249,8 +251,7 @@ class Sequencer(Frame):
                         track.events.remove(vis.event)
                         track.visualizers.remove(vis)
                         
-                        self.playback_manager.invalidate_after(vis.event.time, engine)
-                        self.playback_manager.check_inputs(self.old_beat, engine, self.tracks)
+                        self.playback_manager.recompute(self.old_beat, engine, self.tracks)
                         
                         return (vis.event.id, drag_offset)
         return None
@@ -345,8 +346,7 @@ class Sequencer(Frame):
             track.events.append(new_event)
             track.visualizers.append(EventVisualizer(new_event))
         
-        self.playback_manager.invalidate_after(new_event.time, engine)
-        self.playback_manager.check_inputs(self.old_beat, engine, self.tracks)
+        self.playback_manager.recompute(self.old_beat, engine, self.tracks)
         
         return True
     

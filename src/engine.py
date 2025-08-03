@@ -10,6 +10,8 @@ from tile import *
 from entity import *
 from utils import clamp
 
+from audio import QueuedSound, audio_manager, SoundType
+
 from copy import deepcopy
 
 TILES_PER_ROW = 9
@@ -21,7 +23,6 @@ GRID_HEIGHT = 18
 @dataclass
 class EngineState:
     entities: dict[UUID, Entity]
-    items: list[GameItem]
 
 class Engine:
     entities: dict[UUID, Entity]
@@ -29,8 +30,6 @@ class Engine:
     def __init__(self, tilemap: pygame.Surface, width=GRID_WIDTH, height=GRID_HEIGHT) -> None:
         self.world_width, self.world_height = width, height
         self.tilemap = tilemap
-
-        self.items: list[GameItem] = []
 
         self.window = pygame.Surface((GRID_WIDTH * TILE_WIDTH, GRID_HEIGHT * TILE_HEIGHT))
         self.world = [[EmptyTile(x, y) for x in range(self.world_width)] for y in range(self.world_height)]
@@ -41,7 +40,7 @@ class Engine:
         self.camera_y: float = 0
     
     def export_state(self) -> EngineState:
-        return EngineState({e.id: deepcopy(e) for e in self.entities.values()}, self.items.copy())
+        return EngineState({e.id: deepcopy(e) for e in self.entities.values()})
     
     def import_state(self, state: EngineState):
         for entity in self.entities.values():
@@ -55,17 +54,15 @@ class Engine:
         
         for entity in state.entities.values():
             if entity.id in self.entities:
-                curr = self.entities[entity.id]
+                curr = deepcopy(self.entities[entity.id])
                 curr.import_state_from(entity)
             else:
                 self.entities.update({entity.id: entity})
         
-        for entity in state.entities:
+        for entity in state.entities.values():
             if isinstance(entity, PlayerEntity):
-                self.player = entity
+                self.player = deepcopy(entity)
                 break
-        
-        self.items = state.items.copy()
 
     def move_player(self, dx: int, dy: int):
         if self.player == None:
@@ -75,6 +72,7 @@ class Engine:
 
         if isinstance(e, EnemyEntity):
             self.entities.pop(e.id)
+            audio_manager.play_sound(SoundType.HIT)
         elif isinstance(e, KeyEntity):
             self.entities.pop(e.id)
 
@@ -100,6 +98,9 @@ class Engine:
             self.camera_y = -GRID_HEIGHT // 2 + self.player.show_y
             self.camera_y = clamp(self.camera_y, 0, self.world_height - GRID_HEIGHT)
 
+    def key_exists(self) -> bool:
+        return any(isinstance(e, KeyEntity) for e in self.entities.values())
+
     def all_enemies_dead(self) -> bool:
         return all(not isinstance(e, EnemyEntity) or e.health <= 0 for e in self.entities.values())
 
@@ -112,8 +113,8 @@ class Engine:
 
         for i, entity in enumerate(self.entities.values()):
             tile_idx = entity.tile_id
-            if i == 0 and entity.health <= 0:
-                tile_idx = 25 # ghost tile
+            if entity == self.player and entity.health <= 0:
+                tile_idx = 35 # ghost tile
             self.draw_tile(entity.show_x - self.camera_x, entity.show_y - self.camera_y, tile_idx)
         
         # HUD

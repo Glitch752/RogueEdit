@@ -1,41 +1,23 @@
+from audio import QueuedSound
 from engine import Engine, EngineState
 from input_sequences.event import Input
 from sequencer.track import Track
 
 
 class EnginePlaybackManager:
-    snapshots: list[EngineState]
+    starting_state: EngineState
     
-    def __init__(self):
-        self.snapshots = []
+    def __init__(self, starting_state: EngineState):
+        self.starting_state = starting_state
     
-    def invalidate_after(self, beat: int, engine: Engine):
-        """Invalidates all snapshots on and after the specified beat."""
-        if beat >= len(self.snapshots):
-            return
-
-        self.snapshots = self.snapshots[:beat+1]
-        engine.import_state(self.snapshots[beat])
+    def reset(self, starting_state: EngineState):
+        self.starting_state = starting_state
     
-    def reset(self):
-        self.snapshots = []
-    
-    def check_inputs(self, beat: int, engine: Engine, tracks: list[Track]):
-        if beat < len(self.snapshots):
-            engine.import_state(self.snapshots[beat])
-            return
-        
-        if len(self.snapshots) == 0:
-            self.snapshots.append(engine.export_state())
-        
-        # Create snapshots until we reach the current beat
-        while len(self.snapshots) <= beat:
-            current_beat = len(self.snapshots)
-            
-            self.process(current_beat, engine, tracks)
-            
-            # Save the current state of the engine
-            self.snapshots.append(engine.export_state())
+    def recompute(self, beat: int, engine: Engine, tracks: list[Track]):
+        engine.import_state(self.starting_state)
+        if beat >= 1:
+            for i in range(0, beat + 1):
+                self.process(i, engine, tracks)
     
     def process(self, beat: int, engine: Engine, tracks: list[Track]):
         inputs = self.get_inputs_at_beat(beat, tracks)

@@ -1,6 +1,7 @@
-import os
 from pygame import Font, Surface
 import pygame
+
+from utils import get_asset
 
 class AssetLoader:
     icons: dict[str, Surface]
@@ -12,7 +13,7 @@ class AssetLoader:
     
     def load(self, filename: str) -> Surface:
         if filename not in self.icons:
-            self.icons[filename] = pygame.image.load(os.path.join("assets", filename)).convert_alpha()
+            self.icons[filename] = pygame.image.load(get_asset(filename)).convert_alpha()
         return self.icons[filename]
     
     def get_font(self, size: int) -> Font:

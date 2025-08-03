@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from pygame import Surface
-from engine import Engine
+from engine import Engine, EngineState
 from input_sequences.event import Input
 from input_sequences.input_sequences import InputSequences
 from sequencer.sequencer import Sequencer
 from sequencer.track import Track, TrackColor
-from tile import EmptyTile, WallTile, LeftVerticalWallTile, RightVerticalWallTile, FrontCornerLeftTile, FrontCornerRightTile, BackCornerLeftTile, BackCornerRightTile, BackWallTile
+from tile import EmptyTile, WallTile, PitTile, LeftVerticalWallTile, RightVerticalWallTile, FrontCornerLeftWallTile, FrontCornerRightWallTile, BackCornerLeftWallTile, BackCornerRightWallTile, BackWallTile, BackCornerLeftPitTile,BackCornerRightPitTile, FrontCornerLeftPitTile, FrontCornerRightPitTile, BackPitTile, RightVerticalPitTile, LeftVerticalPitTile, FrontPitTile
 from entity import PlayerEntity, SnakeEntity, RatEntity, KeyEntity, DoorEntity, ExitEntity
 
 CONTEXTUALIZED_WALLS = True
@@ -13,13 +13,15 @@ CONTEXTUALIZED_WALLS = True
 all_tiles = {
     ".": EmptyTile,
     "#": WallTile,
-    "%": BackWallTile,
-    "[": LeftVerticalWallTile,
-    "]": RightVerticalWallTile,
-    "<": FrontCornerLeftTile,
-    ">": FrontCornerRightTile,
-    "{": BackCornerLeftTile,
-    "}": BackCornerRightTile,
+    "%": BackPitTile,
+    "_": FrontPitTile, 
+    "[": LeftVerticalPitTile,
+    "]": RightVerticalPitTile,
+    "<": FrontCornerLeftPitTile,
+    ">": FrontCornerRightPitTile,
+    "{": BackCornerLeftPitTile,
+    "}": BackCornerRightPitTile,
+    " ": PitTile,
 }
 
 all_entities = {
@@ -67,12 +69,6 @@ class Puzzle:
         # engine.world = self.world
         return engine
 
-    def make_sequencer(self, pos: tuple[int, int, int, int], engine_width: int):
-        sequencer = Sequencer(pos, engine_width)
-        self.update_sequencer(sequencer)
-        
-        return sequencer
-
     def update_sequencer(self, sequencer: Sequencer):
         track_datas: list[tuple[str, TrackColor]] = [
             ("A", TrackColor("#995555", "#553333", "#995555")),
@@ -100,8 +96,9 @@ class Puzzle:
         
         return input_sequences
     
-    def update(self, sequencer: Sequencer, input_sequences: InputSequences):
+    def update(self, sequencer: Sequencer, state: EngineState, input_sequences: InputSequences):
         self.update_sequencer(sequencer)
+        sequencer.playback_manager.reset(state)
         input_sequences.set_events(self.input_sequences)
     
 puzzles = [
@@ -111,7 +108,7 @@ puzzles = [
             "#.............#######..........#",
             "#.............#.....#.....####.#",
             "#.............#.....#.....#..#.#",
-            "#.............###d###.....#..#.#",
+            "#.............#######.....#..#.#",
             "#.........................####.#",
             "#..............................#",
             "#..............................#",
@@ -128,18 +125,18 @@ puzzles = [
             [Input.Right],
             [Input.Left],
             [Input.Wait]
-        ], [5]),
+        ], [3]),
     Puzzle("Locked Door", [
             "################################",
             "#..............................#",
-            "#.............#######..........#",
-            "#.............#...r.#.....####.#",
-            "#.............#.....#.....#..#.#",
-            "#.............###d###.....#..#.#",
+            "#............#######...........#",
+            "#............#...r.#......####.#",
+            "#............#.....#......#..#.#",
+            "#............###d###......#..#.#",
             "#.........................####.#",
             "#..............................#",
-            "#..............................#",
-            "#..p......k......s.............#",
+            "#................s.............#",
+            "#..p..k........................#",
             "#..............................#",
             "#..............................#",
             "#........##########............#",
@@ -150,20 +147,107 @@ puzzles = [
             "################################",
         ], [
             [Input.Right, Input.Up],
-            [Input.Left, Input.Down],
+            [Input.Right, Input.Down],
+            [Input.Left, Input.Right],
             [Input.Wait]
         ],  [5]),
+    Puzzle("Locked Door + Pit", [
+            "################################",
+            "#..............................#",
+            "#.............#######..........#",
+            "#.............#...r.#.....####.#",
+            "#.............#.....#.....#..#.#",
+            "#.............###d###.....#..#.#",
+            "#.........................####.#",
+            "#..............................#",
+            "#.........{%%%}................#",
+            "#..p.k....[   ]..s.............#",
+            "#.........<___>................#",
+            "#..............................#",
+            "#........##########............#",
+            "#........#........#............#",
+            "#........#........#............#",
+            "#........##########............#",
+            "#..............................#",
+            "################################",
+        ], [
+            [Input.Right, Input.Up],
+            [Input.Right, Input.Down],
+            [Input.Left],
+            [Input.Wait]
+        ],  [4, 5]),
+        Puzzle("Locked Door + Pit (2)", [
+            "################################",
+            "#..............................#",
+            "#.............#######..........#",
+            "#.............#...r.#....#####.#",
+            "#.............#.....#....#..s#.#",
+            "#.............###d###....#...#.#",
+            "#........................##d##.#",
+            "#..............................#",
+            "#.........{%%%}................#",
+            "#..p.k....[   ]..s.............#",
+            "#.........<___>................#",
+            "#..............................#",
+            "#........##########............#",
+            "#........#........#............#",
+            "#........#........#............#",
+            "#........##########............#",
+            "#..............................#",
+            "################################",
+        ], [
+            [Input.Right, Input.Up],
+            [Input.Right, Input.Down],
+            [Input.Left],
+            [Input.Wait],
+        ],  [3, 4, 5]),
+                Puzzle("Locked Door + Pit (3)", [
+            "################################",
+            "#..............................#",
+            "#.............#######..........#",
+            "#.............#...r.#....#####.#",
+            "#.............#.....#....#..s#.#",
+            "#.............###d###....#...#.#",
+            "#........................##d##.#",
+            "#..............................#",
+            "#.........{%%%}................#",
+            "#..p.k....[   ]..s.............#",
+            "#.........<___>................#",
+            "#..............................#",
+            "#........##########............#",
+            "#........#........#............#",
+            "#........#........#............#",
+            "#........##########............#",
+            "#...........s..................#",
+            "################################",
+        ], [
+            [Input.Right, Input.Up],
+            [Input.Right, Input.Down],
+            [Input.Left],
+            [Input.Wait],
+            [Input.Wait]
+        ],  [3, 4, 5])
 ]
 
 # TURN BACK NOW PLEASE
 
 wall_types = {
     WallTile: 1, # Default wall tile
-    BackCornerLeftTile: 2,
-    BackCornerRightTile: 3,
+    BackCornerLeftWallTile: 2,
+    BackCornerRightWallTile: 3,
     BackWallTile: 4,
     LeftVerticalWallTile: 5,
     RightVerticalWallTile: 6
+}
+
+pit_types = {
+    PitTile: 1, # Default wall tile
+    BackCornerLeftPitTile: 2,
+    BackCornerRightPitTile: 3,
+    BackPitTile: 4,
+    LeftVerticalPitTile: 5,
+    RightVerticalPitTile: 6,
+    FrontPitTile: 7
 }
 
 # hey im really sorry this shit is ugly af and almost 100% not how either of you would likely do this, sorry for wasting time on it, its just really late and i cant make myself put this off until tommorow :sob:
@@ -200,25 +284,25 @@ def contextualize(world, grid, width, height):
                             [_, _, _],
                             [_, 1, 1],
                             [_, 1, _]
-                        ]: wall = BackCornerLeftTile
+                        ]: wall = BackCornerLeftWallTile
 
                         case [
                             [_, _, _],
                             [4, 1, _],
                             [_, 1, _]
-                        ]: wall = BackCornerRightTile
+                        ]: wall = BackCornerRightWallTile
 
                         case [
                             [_, 5, _],
                             [_, 1, 1],
                             [_, _, _]
-                        ]: wall = FrontCornerLeftTile
+                        ]: wall = FrontCornerLeftWallTile
 
                         case [
                             [_, 6, _],
                             [1, 1, _],
                             [_, _, _]
-                        ]: wall = FrontCornerRightTile
+                        ]: wall = FrontCornerRightWallTile
 
                         case [
                             [_, _, _],
@@ -240,5 +324,76 @@ def contextualize(world, grid, width, height):
                         case _:
                             wall = WallTile
                     contextualized_world[y][x] = wall(x,y)
+
+                # if isinstance(world[y][x], PitTile):
+                #     nearby_tiles = [[0 for _ in range(sample_range)] for _ in range(sample_range)]
+                #     for index in range(sample_range ** 2):
+                #         i = index // sample_range
+                #         j = index % sample_range
+                #         i_x = (i+x-1)
+                #         i_y = (j+y-1)
+
+                #         # help meeee -_-
+                #         try:
+                #             if type(world[i_y][i_x]) in pit_types:
+                #                 nearby_tiles[j][i] = pit_types[type(world[i_y][i_x])]
+                #             else:
+                #                 nearby_tiles[j][i] = 0
+                #         except IndexError:
+                #             nearby_tiles[j][i] = 0
+                                
+                #             # if isinstance(world[i_y][i_x], (WallTile, BackCornerLeftTile, BackCornerRightTile, FrontCornerLeftTile, FrontCornerRightTile, LeftVerticalWallTile, RightVerticalWallTile)):
+                #             #     nearby_tiles[j][i] = 1
+                #                 # nearby_tiles[j][i] = [i_x, i_y]
+                        
+                #     pit = None
+                #     print(
+                #         "wtf"
+                #     )
+                    # match nearby_tiles:
+                    #     case [
+                    #         [_, _, _],
+                    #         [_, 1, 1],
+                    #         [_, 1, _]
+                    #     ]: pit = BackCornerLeftPitTile
+
+                    #     case [
+                    #         [_, _, _],
+                    #         [4, 1, _],
+                    #         [_, 1, _]
+                    #     ]: pit = BackCornerRightPitTile
+
+                    #     case [
+                    #         [_, 5, _],
+                    #         [_, 1, 1],
+                    #         [_, _, _]
+                    #     ]: pit = FrontCornerLeftPitTile
+
+                    #     case [
+                    #         [_, 6, _],
+                    #         [1, 1, _],
+                    #         [_, _, _]
+                    #     ]: pit = FrontCornerRightPitTile
+
+                    #     case [
+                    #         [_, _, _],
+                    #         [2 | 4, _, _],
+                    #         [_, _, _]
+                    #     ]: pit = BackPitTile
+
+                    #     case [
+                    #         [_, 5 | 2, _],
+                    #         [_, 1, _],
+                    #         [_, _, _]
+                    #     ]: pit = LeftVerticalPitTile
+
+                    #     case [
+                    #         [_, 6 | 3, _],
+                    #         [_, 1, _],
+                    #         [_, _, _]
+                    #     ]: pit = RightVerticalPitTile
+                    #     case _:
+                    #         pit = PitTile
+                    # contextualized_world[y][x] = pit(x,y)
         return contextualized_world
                 

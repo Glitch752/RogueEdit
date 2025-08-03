@@ -1,4 +1,7 @@
 import math
+import sys
+import platform
+import os
 
 def exp_decay(a: float, b: float, decay: float, dt: float) -> float:
     """
@@ -17,3 +20,16 @@ def format_seconds(duration: float, short: bool = False) -> str:
     if short:
         return f"{seconds}.{int(milliseconds // 10):02}"
     return f"{minutes:02}:{seconds:02}.{milliseconds:03}"
+
+def is_web() -> bool:
+    return sys.platform == "emscripten" or 'wasm' in platform.machine()
+
+def get_asset(*vargs) -> str:
+    args: list[str] = list(vargs)
+    if is_web():
+        filename = args[-1]
+        if filename.endswith(".wav"):
+            args[-1] = filename.replace(".wav", ".ogg")
+        return "web_assets/" + "/".join(args)
+    
+    return os.path.join("assets", *args)

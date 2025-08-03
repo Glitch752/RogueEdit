@@ -6,6 +6,7 @@ if typing.TYPE_CHECKING:
 from tile import *
 from utils import exp_decay
 from uuid import UUID, uuid4
+from audio import audio_manager, SoundType
 
 def lerp(a, b, t): return a + (b - a) * t
 
@@ -29,12 +30,17 @@ class Entity:
     def move(self, engine: "Engine", dx: int, dy: int) -> typing.Optional["Entity"]:
         """returns the entity that gets collided with on move"""
         
+        if self.health <= 0:
+            return None
+
         self.x += dx
         self.y += dy
         try:
             if engine.world[self.y][self.x].solid:
                 self.x -= dx
                 self.y -= dy
+            elif isinstance(engine.world[self.y][self.x], PitTile):
+                self.health = 0
             else:
                 for entity in engine.entities.values():
                     if entity is not self and entity.x == self.x and entity.y == self.y:
@@ -66,7 +72,7 @@ class EnemyEntity(Entity):
         super().__init__(x, y, index, 1)
 
     def on_my_turn(self, engine: "Engine", target_x: int, target_y: int):
-        solids = [[not engine.world[y][x].solid for x in range(engine.world_width)] for y in range(engine.world_height)]
+        solids = [[not (engine.world[y][x].solid or isinstance(engine.world[y][x], PitTile)) for x in range(engine.world_width)] for y in range(engine.world_height)]
 
         solids = np.transpose(solids, (1, 0))
 
@@ -86,6 +92,8 @@ class EnemyEntity(Entity):
         elif engine.player:
             # ATTACK!
             player = engine.player
+            if player.health > 0:
+                audio_manager.play_sound(SoundType.HIT, 0.4)
             player.health = max(player.health - 1, 0)
             pass
 
