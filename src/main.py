@@ -47,6 +47,8 @@ def main():
         current_puzzle += 1
         if current_puzzle >= len(puzzles):
             running = False
+            print("bye")
+            return
         p = puzzles[current_puzzle]
         engine = p.make_engine(TILEMAP)
         p.update(sequencer, engine.export_state(), input_sequences)
@@ -67,7 +69,7 @@ def main():
     frames: list[Frame] = [sequencer, input_sequences]
 
     pygame.mixer.music.load("assets/master_track.ogg")
-    pygame.mixer.music.set_volume(0.3)
+    pygame.mixer.music.set_volume(0.15)
     pygame.mixer.music.play(-1, fade_ms=500)
     
     def handle_event(event: pygame.Event):

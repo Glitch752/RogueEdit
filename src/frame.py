@@ -32,7 +32,7 @@ class Frame:
         return self.rect.collidepoint(pygame.mouse.get_pos())
 
     def on_mouse_down(self, mouse: tuple[int, int]):
-        for icon in self.hoverables:
+        for icon in list(self.hoverables):
             icon.click(mouse[0], mouse[1])
     
     def on_mouse_up(self, mouse: tuple[int, int]):
