@@ -90,6 +90,13 @@ class Sequencer(Frame):
         for track in tracks:
             self.tracks.append(self.add(track))
     
+    def reset(self):
+        self.playing_direction = 0.0
+        self.update_icons()
+        self.current_position = 0.0
+        self.scroll_target_x = 0.0
+        self.playback_manager.reset()
+    
     def play_pressed(self):
         self.playing_direction = 1 if self.playing_direction == 0 else 0
         self.update_icons()

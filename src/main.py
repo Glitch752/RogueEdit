@@ -114,7 +114,7 @@ def main():
                 if event.key == pygame.K_SPACE:
                     sequencer.play_pressed()
         
-        if engine.all_entities_dead():
+        if engine.all_enemies_dead():
             advance_puzzle()
         
         engine.update(delta)

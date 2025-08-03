@@ -100,9 +100,8 @@ class Engine:
             self.camera_y = -GRID_HEIGHT // 2 + self.player.show_y
             self.camera_y = clamp(self.camera_y, 0, self.world_height - GRID_HEIGHT)
 
-    def all_entities_dead(self) -> bool:
-        # TODO: We remove entities instead of setting their health to 0, so this doesn't work
-        return all(entity.health <= 0 for entity in self.entities.values())
+    def all_enemies_dead(self) -> bool:
+        return all(not isinstance(e, EnemyEntity) or e.health <= 0 for e in self.entities.values())
 
     def draw(self):
         self.window.fill('black')

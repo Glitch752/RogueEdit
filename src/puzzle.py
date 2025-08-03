@@ -91,6 +91,8 @@ class Puzzle:
         sequencer.set_tracks([
             Track([], *track_datas[i], length) for i, length in enumerate(self.track_lengths)
         ])
+        
+        sequencer.reset()
 
     def make_input_sequences(self, pos: tuple[int, int, int, int]):
         input_sequences = InputSequences(pos)

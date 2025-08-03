@@ -17,6 +17,9 @@ class EnginePlaybackManager:
         self.snapshots = self.snapshots[:beat+1]
         engine.import_state(self.snapshots[beat])
     
+    def reset(self):
+        self.snapshots = []
+    
     def check_inputs(self, beat: int, engine: Engine, tracks: list[Track]):
         if beat < len(self.snapshots):
             engine.import_state(self.snapshots[beat])
