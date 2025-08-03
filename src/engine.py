@@ -54,15 +54,13 @@ class Engine:
         
         for entity in state.entities.values():
             if entity.id in self.entities:
-                curr = deepcopy(self.entities[entity.id])
+                curr = self.entities[entity.id]
                 curr.import_state_from(entity)
+                
+                if isinstance(entity, PlayerEntity):
+                    self.player = curr
             else:
-                self.entities.update({entity.id: entity})
-        
-        for entity in state.entities.values():
-            if isinstance(entity, PlayerEntity):
-                self.player = deepcopy(entity)
-                break
+                self.entities.update({entity.id: deepcopy(entity)})
 
     def move_player(self, dx: int, dy: int):
         if self.player == None:
